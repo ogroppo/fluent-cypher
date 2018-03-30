@@ -25,6 +25,12 @@ Following the official documentation it is better to avoid literals so everythin
 		* [merge()](#merge)
 		* [mergeNode()](#mergeNode)
 		* [mergeRel()](#mergeRel)
+	* [DELETE](#deleteMethods)
+		* [delete()](#delete)
+		* [deleteNode()](#deleteNode)
+		* [deleteRel()](#deleteRel)
+		* [detachDelete()](#detachDelete)
+		* [detachDeleteNode()](#detachDeleteNode)
 * [Debug](#debug)
 * [Tests](#tests)
 
@@ -33,10 +39,10 @@ Following the official documentation it is better to avoid literals so everythin
 ```js
 const CypherQuery = require('fluent-cypher');
 
-var cq = new CypherQuery();
+var query = new CypherQuery();
 
-cq.queryString // ''
-cq.queryParams // {}
+query.queryString // ''
+query.queryParams // {}
 
 ```
 
@@ -44,9 +50,9 @@ cq.queryParams // {}
 
 ### <a name="createMethods"></a> CREATE Methods
 
-#### <a name="create"></a> .create(...patterns)
+#### <a name="create"></a> create(...patterns)
 
-Generic method that accepts custom string as a pattern
+Generic method that accepts custom strings as patterns
 
 ~~~js
 
@@ -64,7 +70,7 @@ Accepts object with properties, labels, alias.
 
 query.createNode() // CREATE (node)
 
-query.createNode({alias: 'myNode', label: 'Obj', labels: ['this', 'fancy label']}) // CREATE (myNode:`Obj`:`this`:`fancy label`)
+query.createNode({alias: 'myNode', label: 'Obj', labels: ['a label', 'fancy label']}) // CREATE (myNode:`Obj`:`a label`:`fancy label`)
 
 ~~~
 
@@ -82,13 +88,9 @@ query.createRel({alias: 'myRel', type: 'REL', myProp: 'myVal'}) // CREATE ()->[m
 
 ### <a name="matchMethods"></a> MATCH methods
 
-#### <a name="match"></a> match
+#### <a name="match"></a> match(...patterns)
 
 ~~~js
-
-query.match([...patterns])
-
-query.match() // ''
 
 query.match("(node)") // MATCH (node)
 
@@ -96,11 +98,9 @@ query.match("(node)", "()->[rel]->()") // MATCH (node), ()->[rel]->()
 
 ~~~
 
-#### <a name="matchNode"></a> matchNode
+#### <a name="matchNode"></a> matchNode([cypherNode] [, options])
 
 ~~~js
-
-query.matchNode([cypherNode] [, options])
 
 query.matchNode() // MATCH (node)
 
@@ -108,11 +108,9 @@ query.matchNode({alias: 'myNode', label: 'Obj', labels: ['this', 'fancy label']}
 
 ~~~
 
-#### <a name="matchRel"></a> matchRel
+#### <a name="matchRel"></a> matchRel([cypherRel] [, options])
 
 ~~~js
-
-query.matchRel([cypherNode] [, options])
 
 query.matchRel() // MATCH ()->[rel]->()
 
@@ -122,13 +120,9 @@ query.matchRel({alias: 'myRel', type: 'REL'}) // MATCH ()->[rel:`REL`]->()
 
 ### <a name="mergeMethods"></a> MERGE methods
 
-#### <a name="merge"></a> merge
+#### <a name="merge"></a> merge(...patterns)
 
 ~~~js
-
-query.merge([...patterns])
-
-query.merge() // ''
 
 query.merge("(node)") // MERGE (node)
 
@@ -140,23 +134,22 @@ query.merge("(node)", "()->[rel:`type`]->()") // MERGE (node), ()->[rel:`type`]-
 
 ~~~js
 
-query.mergeNode([cypherNode] [, options])
-
 query.mergeNode() // MERGE (node)
 
 query.mergeNode({alias: 'email', name: 'spam@email.com', label: 'Email', labels: ['Verified', 'Blocked']}) // MERGE (email:`Email`:`Verified`:`Blocked`)
 
 ~~~
 
-#### <a name="mergeRel"></a> mergeRel
+#### <a name="mergeRel"></a> mergeRel(cypherRel [, options])
 
 ~~~js
-
-query.mergeRel(cypherRel [, options])
 
 query.mergeRel({alias: 'friendship', type: 'friend of'}) // MERGE ()->[friendship:`friend of`]->()
 
 ~~~
+
+### <a name="deleteMethods"></a> DELETE methods
+
 
 ### WHERE
 

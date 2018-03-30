@@ -39,8 +39,10 @@ module.exports = class CypherQuery extends CypherTools{
 	}
 
 	delete(...aliases){
-		if(aliases.length)
-			this.queryString += `DELETE ${formatList(aliases)} `
+		if(!aliases.length)
+			throw "delete: you must provide aliases"
+
+		this.queryString += `DELETE ${formatList(aliases)} `
 
 		return this
 	}
@@ -49,9 +51,15 @@ module.exports = class CypherQuery extends CypherTools{
 		return this.delete(this._getCurrentNodeAlias())
 	}
 
+	deleteRel(){
+		return this.delete(this._getCurrentRelAlias())
+	}
+
 	detachDelete(...aliases){
-		if(aliases.length)
-			this.queryString += `DETACH DELETE ${formatList(aliases)} `
+		if(!aliases.length)
+			throw "detachDelete: you must provide aliases"
+
+		this.queryString += `DETACH DELETE ${formatList(aliases)} `
 
 		return this
 	}
