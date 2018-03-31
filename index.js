@@ -112,15 +112,15 @@ module.exports = class CypherQuery extends CypherTools{
 		return this
 	}
 
-	matchChild(node = {}, options = {}){
+	matchChild(child = {}, options = {}){
 
-		node.alias = this._getValidNodeAlias(node.alias || 'child')
+		child.alias = this._getValidChildAlias(child.alias)
 
-		var previousNode = {alias: this._getPreviousNodeAlias()}
+		let currentNode = {alias: this._getCurrentNodeAlias()}
 
 		this.optional(options.optional)
 
-		this.match(this._node(previousNode)+this._rel(options.rel)+this._node(node))
+		this.match(this._node(currentNode)+this._rel(child.rel)+this._node(child))
 
 		return this
 	}
@@ -182,15 +182,15 @@ module.exports = class CypherQuery extends CypherTools{
 		return this
 	}
 
-	matchParent(node = {}, options = {}){
+	matchParent(parent = {}, options = {}){
 
-		node.alias = this._getValidNodeAlias(node.alias || 'parent')
+		parent.alias = this._getValidParentAlias(parent.alias)
 
-		var previousNode = {alias: this._getPreviousNodeAlias()}
+		var currentNode = {alias: this._getCurrentNodeAlias()}
 
 		this.optional(options.optional)
 
-		this.match(this._node(node)+this._rel(options.rel)+this._node(previousNode))
+		this.match(this._node(parent)+this._rel(parent.rel)+this._node(currentNode))
 
 		return this
 	}

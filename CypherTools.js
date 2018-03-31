@@ -100,6 +100,38 @@ module.exports = class CypherTools{
 		return currentNodeAlias
 	}
 
+	_getValidParentAlias(candidateAlias){
+		if(candidateAlias && isNotVariableName(candidateAlias))
+			throw "Not valid parent alias: " + candidateAlias
+
+		let currentParentAlias = candidateAlias || 'parent'
+
+		if(this.parentAliases.includes(currentParentAlias)){
+			let existingCount = this.parentAliases.filter(candidateAlias => candidateAlias.startsWith(currentParentAlias)).length
+			currentParentAlias += existingCount
+		}
+
+		this.parentAliases.push(currentParentAlias)
+		this.currentAlias = currentParentAlias
+		return currentParentAlias
+	}
+
+	_getValidChildAlias(candidateAlias){
+		if(candidateAlias && isNotVariableName(candidateAlias))
+			throw "Not valid child alias: " + candidateAlias
+
+		let currentChildAlias = candidateAlias || 'child'
+
+		if(this.childAliases.includes(currentChildAlias)){
+			let existingCount = this.childAliases.filter(candidateAlias => candidateAlias.startsWith(currentChildAlias)).length
+			currentChildAlias += existingCount
+		}
+
+		this.childAliases.push(currentChildAlias)
+		this.currentAlias = currentChildAlias
+		return currentChildAlias
+	}
+
 	_getCurrentNodeAlias(){
 		if(!this.nodeAliases.length)
 			throw "Trying to get current node alias, that not exists"

@@ -1,6 +1,6 @@
 {
   "name": "fluent-cypher",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Builds parametrized Cypher queries, with a fluent API",
   "main": "index.js",
   "scripts": {
