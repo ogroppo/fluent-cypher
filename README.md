@@ -12,6 +12,7 @@ Following the official documentation it is better to avoid literals so everythin
 
 ## Table of Contents
 * [Usage](#usage)
+	* [constuctor()](#constuctor)
 * [Building the query](#building)
 	* [CREATE](#createMethods)
 		* [create()](#create)
@@ -45,6 +46,13 @@ query.queryString // ''
 query.queryParams // {}
 
 ```
+
+#### <a name="constructor"></a> constuctor([options])
+
+| Option        | Type           | Description
+| ------------- |:-------------:| :-----|
+| ` timestamps ` | `Boolean` | timestamps will be added for you like `alias.createdAt = timestamp()` and `alias.updatedAt = timestamp()` |
+| `userId`      | `String`      |  Property will be set like `alias.createdBy = {userId}` and `alias.updatedBy = {userId}`
 
 ## <a name="building"></a> Building the query
 

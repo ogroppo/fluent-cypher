@@ -237,13 +237,15 @@ module.exports = class CypherQuery extends CypherTools{
 		return this
 	}
 
-	mergeChild(childNode = {}, options = {}){
+	mergeChild(child, options = {}){
+		if(!child.rel || !child.rel.type)
+			throw "mergeChild: child.rel.type is required"
 
-		childNode.alias = this._getValidNodeAlias(childNode.alias || 'child')
+		child.alias = this._getValidChildAlias(child.alias)
 
-		const originNode = {alias: this._getPreviousNodeAlias()}
+		let currentNode = {alias: this._getCurrentNodeAlias()}
 
-		this.merge(this._pattern(originNode, options.rel, childNode))
+		this.merge(this._pattern(currentNode, child.rel, child))
 
 		return this
 	}
@@ -294,13 +296,15 @@ module.exports = class CypherQuery extends CypherTools{
 		return this
 	}
 
-	mergeParent(node = {}, options = {}){
+	mergeParent(parent, options = {}){
+		if(!parent.rel || !parent.rel.type)
+			throw "mergeParent: parent.rel.type is required"
 
-		node.alias = this._getValidNodeAlias(node.alias || 'parent')
+		parent.alias = this._getValidParentAlias(parent.alias)
 
-		const originNode = {alias: this._getPreviousNodeAlias()}
+		const currentNode = {alias: this._getCurrentNodeAlias()}
 
-		this.merge(this._node(node)+this._rel(options.rel)+this._node(originNode))
+		this.merge(this._pattern(parent, parent.rel, currentNode))
 
 		return this
 	}
@@ -389,10 +393,10 @@ module.exports = class CypherQuery extends CypherTools{
 	}
 
 	orderBy(...props){
-		if(props.length){
-			this.queryString += `ORDER BY ${formatOrderBy(props)} `
+		if(!props.length)
+			throw "orderBy: cannot order without props"
 
-		}
+		this.queryString += `ORDER BY ${formatOrderBy(props)} `
 
 		return this
 	}
