@@ -1,5 +1,5 @@
 import test from 'ava';
-import CypherQuery from '../../class/CypherQuery';
+import CypherQuery from '../index';
 
 test('Create empty node', t => {
 	var query = new CypherQuery;

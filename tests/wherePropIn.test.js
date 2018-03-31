@@ -1,9 +1,5 @@
 import test from 'ava';
-import CypherQuery from '../../class/CypherQuery';
-
-test('wherePropIn default', t => {
-	t.is(new CypherQuery().wherePropIn().queryString, '')
-});
+import CypherQuery from '../index';
 
 test('wherePropIn arg', t => {
 	t.is(new CypherQuery().matchNode().wherePropIn({mamma: ['this', 'that']}).queryString, 'MATCH (node) WHERE node.mamma IN ["this","that"] ')

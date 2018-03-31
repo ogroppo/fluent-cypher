@@ -1,9 +1,5 @@
 import test from 'ava';
-import CypherQuery from '../../class/CypherQuery';
-
-test('wherePropRegexp default', t => {
-	t.is(new CypherQuery().wherePropRegexp().queryString, '')
-});
+import CypherQuery from '../index';
 
 test('wherePropRegexp arg', t => {
 	const q = new CypherQuery()

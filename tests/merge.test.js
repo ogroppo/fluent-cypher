@@ -1,5 +1,5 @@
 import test from 'ava';
-import CypherQuery from '../../class/CypherQuery';
+import CypherQuery from '../index';
 
 test('MERGE throws', t => {
 	t.throws(()=> new CypherQuery().merge())

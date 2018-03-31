@@ -1,4 +1,4 @@
-const {isNotObject, isNotString, isNotURL, isInt} = require('isnot')
+const {isNotObject, isNotString, isNotURL, isNotPositive} = require('isnot')
 const {formatNode, formatNodeAliasLabels} = require('./lib/node')
 const {formatProps, formatPropKeys, formatPropsParams, formatCreatedAt, formatCreatedBy, formatUpdatedAt, formatUpdatedBy, formatMatchedAt, formatMatchCount, formatOrderBy} = require('./lib/props')
 const {formatAlias} = require('./lib/alias')
@@ -14,6 +14,10 @@ module.exports = class CypherQuery extends CypherTools{
 		this.userId = config.userId
 		this.timestamps = config.timestamps || false
 		this.clausesUsed = []
+		this.currentAlias
+		this.nodeAliases = []
+		this.parentAliases = []
+		this.childAliases = []
 	}
 
 	create(...patterns){
@@ -68,9 +72,11 @@ module.exports = class CypherQuery extends CypherTools{
 		return this.detachDelete(this._getCurrentNodeAlias())
 	}
 
-	limit(integer){
-		if(isInt(integer) && integer > 0)
-			this.queryString += `LIMIT ${integer} `
+	limit(amount){
+		if(isNotPositive(amount))
+			throw "limit: amount must be positive integer"
+
+		this.queryString += `LIMIT ${amount} `
 
 		return this
 	}
@@ -149,9 +155,9 @@ module.exports = class CypherQuery extends CypherTools{
 				sets.push(formatUpdatedAt(node))
 			if(this.userId)
 				sets.push(formatUpdatedBy(node.alias, this.userId))
-		}
 
-		this.set(...sets)
+			this.set(...sets)
+		}
 
 		return this
 	}
@@ -213,9 +219,9 @@ module.exports = class CypherQuery extends CypherTools{
 				sets.push(formatUpdatedAt(rel))
 			if(this.userId)
 				sets.push(formatUpdatedBy(rel.alias, this.userId))
-		}
 
-		this.set(...sets)
+			this.set(...sets)
+		}
 
 		return this
 	}
@@ -272,15 +278,18 @@ module.exports = class CypherQuery extends CypherTools{
 		let sets = []
 		if(options.setProps)
 			sets.push(this._formatPropsParams(node.alias, options.setProps))
+
 		if(options.setLabels)
 			sets.push(formatNodeAliasLabels(node, options.setLabels))
+
 		if(sets.length || removes.length){
 			if(this.timestamps)
 				sets.push(formatUpdatedAt(node))
 			if(this.userId)
 				sets.push(formatUpdatedBy(node.alias, this.userId))
+
+			this.set(...sets)
 		}
-		this.set(...sets)
 
 		return this
 	}
@@ -322,7 +331,8 @@ module.exports = class CypherQuery extends CypherTools{
 		if(options.set)
 			sets.push(formatProps(rel, options.set))
 
-		this.set(...sets)
+		if(sets.length)
+			this.set(...sets)
 
 		return this
 	}
@@ -418,42 +428,52 @@ module.exports = class CypherQuery extends CypherTools{
 		return this
 	}
 
-	returnNode(nodeAlias = ''){
-		if(isNotString(nodeAlias))
-			throw "returnNode: nodeAlias must be string"
+	returnNode(alias = ''){
+		if(isNotString(alias))
+			throw "returnNode: alias must be string"
 
-		nodeAlias = nodeAlias || this._getCurrentNodeAlias()
-		this.queryString += `RETURN ${nodeAlias} as node `
-
-		return this
+		alias = alias || this._getCurrentNodeAlias()
+		return this.return(`${alias} as node`)
 	}
 
-	returnRel(relAlias = ''){
-		if(isNotString(relAlias))
-			throw "Error: returnRel - relAlias must be string"
+	returnParent(alias = ''){
+		if(isNotString(alias))
+			throw "returnParent: alias must be string"
 
-		this.queryString += `RETURN `
-		if(relAlias)
-			this.queryString += `${relAlias} as `
+		alias = alias || this._getCurrentParentAlias()
+		return this.return(`${alias} as parent`)
+	}
 
-		this.queryString += `rel `
+	returnChild(alias = ''){
+		if(isNotString(alias))
+			throw "returnChild: alias must be string"
 
-		return this
+		alias = alias || this._getCurrentChildAlias()
+		return this.return(`${alias} as child`)
+	}
+
+	returnRel(alias = ''){
+		if(isNotString(alias))
+			throw "returnRel: alias must be string"
+
+		alias = alias || this._getCurrentRelAlias()
+		return this.return(`${alias} as rel`)
 	}
 
 	set(...props){
-		if(props.length){
-			this.queryString += `SET ${formatList(props)} `
-		}
+		if(!props.length)
+			throw "set: cannot set nothing"
+
+		this.queryString += `SET ${formatList(props)} `
 
 		return this
 	}
 
 	skip(amount){
-		if(amount && parseInt(amount)){
-			this.queryString += `SKIP ${parseInt(amount)} `
+		if(isNotPositive(amount))
+			throw "skip: amount must be positive integer"
 
-		}
+		this.queryString += `SKIP ${amount} `
 
 		return this
 	}

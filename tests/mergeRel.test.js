@@ -1,5 +1,5 @@
 import test from 'ava';
-import CypherQuery from '../../class/CypherQuery';
+import CypherQuery from '../index';
 
 test('MERGE invalid rel throws error', t => {
 	var query = new CypherQuery;

@@ -1,5 +1,5 @@
 import test from 'ava';
-import CypherQuery from '../../class/CypherQuery';
+import CypherQuery from '../index';
 
 test('REMOVE clause', t => {
 	t.is(new CypherQuery().remove().queryString, '')

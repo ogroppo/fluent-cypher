@@ -1,4 +1,4 @@
-const {isStringAndNotEmpty, isNotVariableName} = require('isnot')
+const {isName, isNotVariableName} = require('isnot')
 const {formatNode, nodeMetaFields} = require('./lib/node')
 const {formatRel, relMetaFields} = require('./lib/rel')
 
@@ -52,7 +52,7 @@ module.exports = class CypherTools{
 	}
 
 	_node(node = {}){
-		if(isStringAndNotEmpty(node.label)){
+		if(isName(node.label)){
 			node.labels = node.labels || []
 			node.labels.push(node.label)
 		}
@@ -84,30 +84,41 @@ module.exports = class CypherTools{
 		return this._node(parentNode)+this._rel(rel)+this._node(childNode)
 	}
 
-	_getValidNodeAlias(alias){
-		if(alias && isNotVariableName(alias))
-			throw "Not valid node alias"
+	_getValidNodeAlias(candidateAlias){
+		if(candidateAlias && isNotVariableName(candidateAlias))
+			throw "Not valid node alias: " + candidateAlias
 
-		let currentNodeAlias = alias || 'node'
+		let currentNodeAlias = candidateAlias || 'node'
 
-		if(!this.nodeAliases){
-			this.nodeAliases = [currentNodeAlias]
-		}else{
-			if(this.nodeAliases.includes(currentNodeAlias)){
-				let existingCount = this.nodeAliases.filter((alias) => alias.startsWith(currentNodeAlias)).length
-				currentNodeAlias += existingCount
-			}
-
-			this.nodeAliases.push(currentNodeAlias)
+		if(this.nodeAliases.includes(currentNodeAlias)){
+			let existingCount = this.nodeAliases.filter(candidateAlias => candidateAlias.startsWith(currentNodeAlias)).length
+			currentNodeAlias += existingCount
 		}
 
+		this.nodeAliases.push(currentNodeAlias)
 		this.currentAlias = currentNodeAlias
 		return currentNodeAlias
 	}
 
 	_getCurrentNodeAlias(){
-		if(this.nodeAliases.length)
-			return this.nodeAliases[this.nodeAliases.length - 1]
+		if(!this.nodeAliases.length)
+			throw "Trying to get current node alias, that not exists"
+
+		return this.nodeAliases[this.nodeAliases.length - 1]
+	}
+
+	_getCurrentParentAlias(){
+		if(!this.parentAliases.length)
+			throw "Trying to get current parent alias, that not exists"
+
+		return this.parentAliases[this.parentAliases.length - 1]
+	}
+
+	_getCurrentChildAlias(){
+		if(!this.childAliases.length)
+			throw "Trying to get current child alias, that not exists"
+
+		return this.childAliases[this.childAliases.length - 1]
 	}
 
 	_getValidRelAlias(alias){

@@ -4,20 +4,22 @@
   "description": "Builds parametrized Cypher queries, with a fluent API",
   "main": "index.js",
   "scripts": {
-    "test": "ava --no-color"
+    "test": "ava -v"
   },
   "keywords": [
     "neo4j",
     "cypher",
-    "query builder"
+    "query builder",
+    "graph database",
+    "fluent API"
   ],
-  "author": "Orlando Groppo",
+  "author": "Orlando Groppo <orlando.groppo@gmail.com>",
   "license": "UNLICENCED",
   "repository": "git@github.com:ogroppo/fluent-cypher.git",
+  "dependencies": {
+    "isnot": "^0.7.0"
+  },
   "devDependencies": {
     "ava": "^0.23.0"
-  },
-  "dependencies": {
-    "isnot": "^0.2.1"
   }
 }

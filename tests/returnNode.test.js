@@ -1,5 +1,5 @@
 import test from 'ava';
-import CypherQuery from '../../class/CypherQuery';
+import CypherQuery from '../index';
 
 test('returnNode invalid', t => {
 	var query = new CypherQuery;
@@ -18,7 +18,7 @@ test('returnNode default', t => {
 	t.is(query.queryString, 'MATCH (node) RETURN node as node ');
 });
 
-test('returnNode argument', t => {
+test('returnNode alias', t => {
 	var query = new CypherQuery;
 	query.returnNode('klash');
 	t.is(query.queryString, 'RETURN klash as node ');

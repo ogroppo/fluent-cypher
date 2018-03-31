@@ -1,5 +1,5 @@
 import test from 'ava';
-import CypherQuery from '../../class/CypherQuery';
+import CypherQuery from '../index';
 
 test('OPTIONAL clause', t => {
 	t.is(new CypherQuery().optional().queryString, '')

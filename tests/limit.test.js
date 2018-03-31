@@ -1,15 +1,10 @@
 import test from 'ava';
-import CypherQuery from '../../class/CypherQuery';
+import CypherQuery from '../index';
 
-test('limit default', t => {
-	t.is(new CypherQuery().limit().queryString, '')
-	t.is(new CypherQuery().limit(0).queryString, '')
-	t.is(new CypherQuery().limit(0.0).queryString, '')
-	t.is(new CypherQuery().limit('0').queryString, '')
-	t.is(new CypherQuery().limit(null).queryString, '')
-	t.is(new CypherQuery().limit(undefined).queryString, '')
-	t.is(new CypherQuery().limit('33').queryString, '')
-	t.is(new CypherQuery().limit(33.33).queryString, '')
+test('limit throws', t => {
+	t.throws(()=> new CypherQuery().limit())
+	t.throws(()=> new CypherQuery().limit(0))
+	t.throws(()=> new CypherQuery().limit('1'))
 });
 
 test('limit clause', t => {

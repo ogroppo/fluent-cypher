@@ -1,5 +1,5 @@
 import test from 'ava';
-import CypherQuery from '../../class/CypherQuery';
+import CypherQuery from '../index';
 
 test('xor default', t => {
 	t.is(new CypherQuery().xor().queryString, '')

@@ -1,5 +1,5 @@
 import test from 'ava';
-import CypherQuery from '../../class/CypherQuery';
+import CypherQuery from '../index';
 
 test('returnRel invalid', t => {
 	var query = new CypherQuery;
@@ -12,9 +12,10 @@ test('returnRel invalid', t => {
 });
 
 test('returnRel default', t => {
-	var query = new CypherQuery;
-	query.returnRel();
-	t.is(query.queryString, 'RETURN rel ');
+	var query = new CypherQuery()
+		.matchRel()
+		.returnRel()
+	t.is(query.queryString, 'MATCH ()-[rel]->() RETURN rel as rel ');
 });
 
 test('returnRel arg', t => {
