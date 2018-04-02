@@ -12,19 +12,25 @@ module.exports = class CypherTools{
 			_queryString = _queryString.replace(new RegExp(`{${param}}`, 'g'), JSON.stringify(_queryParams[param]) )
 		}
 
-		if(options.emptyLineBefore)
-			console.log()
-
-		if(options.multiLine){
-			_queryString = _queryString.replace(' MERGE', ' \nMERGE')
+		if(!options.compact){
+			_queryString = _queryString.replace(new RegExp('[^N] MATCH', 'g'), ' \nMATCH')
+			_queryString = _queryString.replace(new RegExp(' MERGE', 'g'), ' \nMERGE')
+			_queryString = _queryString.replace(new RegExp(' ON', 'g'), ' \nON')
+			_queryString = _queryString.replace(new RegExp(' SET', 'g'), ' \nSET')
+			_queryString = _queryString.replace(new RegExp(' REMOVE', 'g'), ' \nREMOVE')
+			_queryString = _queryString.replace(new RegExp('[^H] DELETE', 'g'), ' \nDELETE')
+			_queryString = _queryString.replace(new RegExp(' DETACH', 'g'), ' \nDETACH')
 			_queryString = _queryString.replace(' RETURN', ' \nRETURN')
-			_queryString = _queryString.replace(' MATCH', ' \nMATCH')
 			console.log()
 		}
 
 		console.log(_queryString)
 
 		return this
+	}
+
+	_extend(...objects){
+		return Object.assign({}, ...objects)
 	}
 
 	_escapeStringRegexp(string){
@@ -91,7 +97,7 @@ module.exports = class CypherTools{
 		let currentNodeAlias = candidateAlias || 'node'
 
 		if(this.nodeAliases.includes(currentNodeAlias)){
-			let existingCount = this.nodeAliases.filter(candidateAlias => candidateAlias.startsWith(currentNodeAlias)).length
+			let existingCount = this.nodeAliases.filter(alias => alias.startsWith(currentNodeAlias)).length
 			currentNodeAlias += existingCount
 		}
 
@@ -107,7 +113,7 @@ module.exports = class CypherTools{
 		let currentParentAlias = candidateAlias || 'parent'
 
 		if(this.parentAliases.includes(currentParentAlias)){
-			let existingCount = this.parentAliases.filter(candidateAlias => candidateAlias.startsWith(currentParentAlias)).length
+			let existingCount = this.parentAliases.filter(alias => alias.startsWith(currentParentAlias)).length
 			currentParentAlias += existingCount
 		}
 
@@ -123,13 +129,29 @@ module.exports = class CypherTools{
 		let currentChildAlias = candidateAlias || 'child'
 
 		if(this.childAliases.includes(currentChildAlias)){
-			let existingCount = this.childAliases.filter(candidateAlias => candidateAlias.startsWith(currentChildAlias)).length
+			let existingCount = this.childAliases.filter(alias => alias.startsWith(currentChildAlias)).length
 			currentChildAlias += existingCount
 		}
 
 		this.childAliases.push(currentChildAlias)
 		this.currentAlias = currentChildAlias
 		return currentChildAlias
+	}
+
+	_getValidRelatedAlias(candidateAlias){
+		if(candidateAlias && isNotVariableName(candidateAlias))
+			throw "Not valid related alias: " + candidateAlias
+
+		let currentRelatedAlias = candidateAlias || 'related'
+
+		if(this.relatedAliases.includes(currentRelatedAlias)){
+			let existingCount = this.relatedAliases.filter(alias => alias.startsWith(currentRelatedAlias)).length
+			currentRelatedAlias += existingCount
+		}
+
+		this.relatedAliases.push(currentRelatedAlias)
+		this.currentAlias = currentRelatedAlias
+		return currentRelatedAlias
 	}
 
 	_getCurrentNodeAlias(){
@@ -159,17 +181,12 @@ module.exports = class CypherTools{
 
 		let currentRelAlias = alias || 'rel'
 
-		if(!this.relAliases){
-			this.relAliases = [currentRelAlias]
-		}else{
-			if(this.relAliases.includes(currentRelAlias)){
-				let existingCount = this.relAliases.filter((alias) => alias.startsWith(currentRelAlias)).length
-				currentRelAlias += existingCount
-			}
-
-			this.relAliases.push(currentRelAlias)
+		if(this.relAliases.includes(currentRelAlias)){
+			let existingCount = this.relAliases.filter((alias) => alias.startsWith(currentRelAlias)).length
+			currentRelAlias += existingCount
 		}
 
+		this.relAliases.push(currentRelAlias)
 		this.currentAlias = currentRelAlias
 		return currentRelAlias
 	}

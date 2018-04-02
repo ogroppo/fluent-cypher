@@ -1,6 +1,6 @@
-const {isNotObject, isNotString, isNotURL, isNotPositive} = require('isnot')
+const {isNotObject, isNotString, isNotURL, isNotPositive, isNotUndefined, isNotEmptyObject} = require('isnot')
 const {formatNode, formatNodeAliasLabels} = require('./lib/node')
-const {formatProps, formatPropKeys, formatPropsParams, formatCreatedAt, formatCreatedBy, formatUpdatedAt, formatUpdatedBy, formatMatchedAt, formatMatchCount, formatOrderBy} = require('./lib/props')
+const {formatProps, formatPropKeys, formatPropsParams, formatCreatedAt, formatCreatedBy, formatUpdatedAt, formatUpdatedBy, formatMatchedAt, formatMatchedCount, formatOrderBy} = require('./lib/props')
 const {formatAlias} = require('./lib/alias')
 const {formatList} = require('./lib/utils')
 
@@ -11,13 +11,19 @@ module.exports = class CypherQuery extends CypherTools{
 		super()
 		this.queryString = ''
 		this.queryParams = {}
-		this.userId = config.userId
-		this.timestamps = config.timestamps || false
+
+		this.config = config
+		if(config.userId){
+			this.queryParams.userId = config.userId
+		}
+
 		this.clausesUsed = []
 		this.currentAlias
 		this.nodeAliases = []
+		this.relAliases = []
 		this.parentAliases = []
 		this.childAliases = []
+		this.relatedAliases = []
 	}
 
 	create(...patterns){
@@ -36,7 +42,7 @@ module.exports = class CypherQuery extends CypherTools{
 
 		this.create(this._node(node))
 
-		if(this.timestamps)
+		if(this.config.timestamps)
 			this.set(formatCreatedAt(node))
 
 		return this
@@ -98,29 +104,28 @@ module.exports = class CypherQuery extends CypherTools{
 	}
 
 	match(...patterns){
-		if(patterns.length){
-			if(this.clausesUsed[this.clausesUsed.length - 1] === 'merge')
-				this.with(this._getPreviousNodeAlias())
+		if(!patterns.length)
+			throw "match: must use patterns"
 
-			this.queryString += `MATCH `
-			this.queryString += `${formatList(patterns)} `
+		if(this.clausesUsed[this.clausesUsed.length - 1] === 'merge')
+			this.with(this._getPreviousNodeAlias())
 
-			this._whereClauseUsed = false
-			this.clausesUsed.push('match')
-		}
+		this.queryString += `MATCH `
+		this.queryString += `${formatList(patterns)} `
+
+		this._whereClauseUsed = false
+		this.clausesUsed.push('match')
 
 		return this
 	}
 
-	matchChild(child = {}, options = {}){
+	matchChild(child = {}, rel = {}, options = {}){
 
 		child.alias = this._getValidChildAlias(child.alias)
 
 		let currentNode = {alias: this._getCurrentNodeAlias()}
 
-		this.optional(options.optional)
-
-		this.match(this._node(currentNode)+this._rel(child.rel)+this._node(child))
+		this.matchPattern(currentNode, rel, child, options)
 
 		return this
 	}
@@ -128,6 +133,9 @@ module.exports = class CypherQuery extends CypherTools{
 	matchNode(node = {}, options = {}){
 		if(isNotObject(node))
 			throw "matchNode: node must be object"
+
+		if(this.config.defaultNodeProps)
+			node = this._extend(this.config.defaultNodeProps, node)
 
 		node.alias = this._getValidNodeAlias(node.alias)
 
@@ -151,10 +159,10 @@ module.exports = class CypherQuery extends CypherTools{
 			sets.push(formatNodeAliasLabels(node, options.setLabels))
 
 		if(sets.length || removes.length){
-			if(this.timestamps)
+			if(this.config.timestamps)
 				sets.push(formatUpdatedAt(node))
-			if(this.userId)
-				sets.push(formatUpdatedBy(node.alias, this.userId))
+			if(this.config.userId)
+				sets.push(formatUpdatedBy(node.alias, this.config.userId))
 
 			this.set(...sets)
 		}
@@ -182,15 +190,21 @@ module.exports = class CypherQuery extends CypherTools{
 		return this
 	}
 
-	matchParent(parent = {}, options = {}){
+	matchParent(parent = {}, rel = {}, options = {}){
 
 		parent.alias = this._getValidParentAlias(parent.alias)
 
-		var currentNode = {alias: this._getCurrentNodeAlias()}
+		const currentNode = {alias: this._getCurrentNodeAlias()}
+
+		this.matchPattern(parent, rel, currentNode, options)
+
+		return this
+	}
+
+	matchPattern(parent, rel, child, options = {}){
 
 		this.optional(options.optional)
-
-		this.match(this._node(parent)+this._rel(parent.rel)+this._node(currentNode))
+		this.match(this._pattern(parent, rel, child))
 
 		return this
 	}
@@ -215,13 +229,24 @@ module.exports = class CypherQuery extends CypherTools{
 			sets.push(formatProps(rel, options.setProps))
 
 		if(sets.length || removes.length){
-			if(this.timestamps)
+			if(this.config.timestamps)
 				sets.push(formatUpdatedAt(rel))
-			if(this.userId)
-				sets.push(formatUpdatedBy(rel.alias, this.userId))
+			if(this.config.userId)
+				sets.push(formatUpdatedBy(rel.alias, this.config.userId))
 
 			this.set(...sets)
 		}
+
+		return this
+	}
+
+	matchRelated(related, rel, options = {}){
+
+		related.alias = this._getValidRelatedAlias(related.alias)
+		rel.alias = this._getValidRelAlias(rel.alias)
+		rel.direction = 'both'
+
+		this.matchPattern({alias: this._getCurrentNodeAlias()}, rel, related, options)
 
 		return this
 	}
@@ -237,15 +262,18 @@ module.exports = class CypherQuery extends CypherTools{
 		return this
 	}
 
-	mergeChild(child, options = {}){
-		if(!child.rel || !child.rel.type)
-			throw "mergeChild: child.rel.type is required"
+	mergeChild(child, rel = {}, options = {}){
+		if(!rel || !rel.type)
+			throw "mergeChild: rel.type is required"
+
+		if(this.config.defaultNodeProps)
+			child = this._extend(this.config.defaultNodeProps, child)
 
 		child.alias = this._getValidChildAlias(child.alias)
 
 		let currentNode = {alias: this._getCurrentNodeAlias()}
 
-		this.merge(this._pattern(currentNode, child.rel, child))
+		this.mergePattern(currentNode, rel, child, options)
 
 		return this
 	}
@@ -254,82 +282,118 @@ module.exports = class CypherQuery extends CypherTools{
 		if(isNotObject(node))
 			throw "mergeNode: node must be object"
 
-		if(typeof node.id !== "undefined")
+		if(isNotUndefined(node.id))
 			throw "mergeNode: node cannot have id"
+
+		if(this.config.defaultNodeProps)
+			node = this._extend(this.config.defaultNodeProps, node)
 
 		node.alias = this._getValidNodeAlias(node.alias)
 
 		this.merge(this._node(node))
 
 		var onCreateSets = []
-		if(this.timestamps)
+		if(this.config.createdTimestamp)
 			onCreateSets.push(formatCreatedAt(node))
-		if(this.userId)
-			onCreateSets.push(formatCreatedBy(node.alias, this.userId))
+		if(this.config.userId)
+			onCreateSets.push(formatCreatedBy(node.alias, this.config.userId))
 		if(options.onCreateSet)
 			onCreateSets.push(formatProps(node, options.onCreateSet))
-		this.onCreateSet(...onCreateSets)
+		if(onCreateSets.length)
+			this.onCreateSet(...onCreateSets)
+
+		var onMatchSets = []
+		if(this.config.matchedTimestamp)
+			onMatchSets.push(formatMatchedAt(node))
+		if(this.config.matchedCount)
+			onMatchSets.push(formatMatchedCount(node))
+		if(options.onMatchSet)
+			onMatchSets.push(formatProps(node, options.onMatchSet))
+		if(onMatchSets.length)
+			this.onMatchSet(...onMatchSets)
 
 		let removes = []
 		if(options.removeProps)
 			removes.push(formatPropKeys(node, options.removeProps))
 		if(options.removeLabels)
 			removes.push(formatNodeAliasLabels(node, options.removeLabels))
-		this.remove(...removes)
+		if(removes.length)
+			this.remove(...removes)
 
 		let sets = []
-		if(options.setProps)
+		if(isNotEmptyObject(options.setProps))
 			sets.push(this._formatPropsParams(node.alias, options.setProps))
-
 		if(options.setLabels)
 			sets.push(formatNodeAliasLabels(node, options.setLabels))
-
+		if(this.config.userId)
+			sets.push(formatUpdatedBy(node.alias, this.config.userId))
 		if(sets.length || removes.length){
-			if(this.timestamps)
-				sets.push(formatUpdatedAt(node))
-			if(this.userId)
-				sets.push(formatUpdatedBy(node.alias, this.userId))
-
+			sets.push(formatUpdatedAt(node))
 			this.set(...sets)
 		}
 
 		return this
 	}
 
-	mergeParent(parent, options = {}){
-		if(!parent.rel || !parent.rel.type)
-			throw "mergeParent: parent.rel.type is required"
+	mergeParent(parent, rel = {}, options = {}){
+		if(this.config.defaultRelProps)
+			rel = this._extend(this.config.defaultRelProps, rel)
+
+		if(!rel || !rel.type)
+			throw "mergeParent: rel.type is required"
+
+		if(this.config.defaultNodeProps)
+			parent = this._extend(this.config.defaultNodeProps, parent)
 
 		parent.alias = this._getValidParentAlias(parent.alias)
 
-		const currentNode = {alias: this._getCurrentNodeAlias()}
-
-		this.merge(this._pattern(parent, parent.rel, currentNode))
+		this.mergeNode(parent, options)
+		this.mergeRel(parent.alias, rel, this._getPreviousNodeAlias())
 
 		return this
 	}
 
-	mergeRel(rel, options = {}){ //it is only a contextual clause
+	mergePattern(left, rel, right){
+		if(rel.depth)
+			throw "mergePattern: depth not allowed in merge"
+
+		this.merge(this._pattern(left, rel, right))
+		return this
+	}
+
+	mergeRel(parentAlias, rel, childAlias, options = {}){
 		if(isNotObject(rel))
 			throw "mergeRel: rel must be object"
 
 		if(!rel.type)
 			throw "mergeRel: rel must have type"
 
+		if(rel.depth)
+			throw "mergeRel: depth not allowed in merge"
+
 		rel.alias = this._getValidRelAlias(rel.alias)
 
-		this.merge(this._node({alias: options.parentAlias})+this._rel(rel)+this._node({alias: options.childAlias}))
+		this.mergePattern({alias: parentAlias}, rel, {alias: childAlias})
 
-		var onMatchSets = [formatMatchedAt(rel), formatMatchCount(rel)]
+		var onMatchSets = []
+		if(this.config.matchedTimestamp)
+			onMatchSets.push(formatMatchedAt(rel))
+		if(this.config.matchedCount)
+			onMatchSets.push(formatMatchedCount(rel))
 		if(options.onMatchSet)
 			onMatchSets.push(formatProps(rel, options.onMatchSet))
-		this.onMatchSet(...onMatchSets)
+		if(onMatchSets.length)
+			this.onMatchSet(...onMatchSets)
 
-		var onCreateSets = [formatCreatedAt(rel)]
+		var onCreateSets = []
+		if(this.config.createdTimestamp)
+			onCreateSets.push(formatCreatedAt(rel))
+		if(this.config.userId)
+			onCreateSets.push(formatCreatedBy(rel))
 		if(options.onCreateSet)
 			onCreateSets.push(formatProps(rel, options.onCreateSet))
-
-		this.onCreateSet(...onCreateSets)
+		if(onCreateSets.length)
+			this.onCreateSet(...onCreateSets)
 
 		var sets = []
 		if(options.set)
@@ -342,10 +406,10 @@ module.exports = class CypherQuery extends CypherTools{
 	}
 
 	onCreateSet(...props){
-		if(props.length){
-			this.queryString += `ON CREATE SET ${formatList(props)} `
+		if(!props.length)
+			throw "onCreateSet: need props"
 
-		}
+		this.queryString += `ON CREATE SET ${formatList(props)} `
 
 		return this
 	}

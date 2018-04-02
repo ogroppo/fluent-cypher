@@ -17,7 +17,7 @@
   "license": "UNLICENCED",
   "repository": "git@github.com:ogroppo/fluent-cypher.git",
   "dependencies": {
-    "isnot": "^0.7.0"
+    "isnot": "^0.8.1"
   },
   "devDependencies": {
     "ava": "^0.23.0"

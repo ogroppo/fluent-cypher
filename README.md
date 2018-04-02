@@ -47,12 +47,13 @@ query.queryParams // {}
 
 ```
 
-#### <a name="constructor"></a> constuctor([options])
+#### <a name="constructor"></a> constuctor([config])
 
 | Option        | Type           | Description
 | ------------- |:-------------:| :-----|
 | ` timestamps ` | `Boolean` | timestamps will be added for you like `alias.createdAt = timestamp()` and `alias.updatedAt = timestamp()` |
 | `userId`      | `String`      |  Property will be set like `alias.createdBy = {userId}` and `alias.updatedBy = {userId}`
+| `defaultNodeProps`      | `Object`      | default props for node
 
 ## <a name="building"></a> Building the query
 
