@@ -32,6 +32,8 @@ Following the official documentation it is better to avoid literals so everythin
 		* [deleteRel()](#deleteRel)
 		* [detachDelete()](#detachDelete)
 		* [detachDeleteNode()](#detachDeleteNode)
+  * [RETURN](#returnMethods)
+  	* [return()](#return)
 * [Debug](#debug)
 * [Tests](#tests)
 
@@ -56,8 +58,6 @@ query.queryParams // {}
 | `defaultNodeProps`      | `Object`      | default props for node
 
 ## <a name="building"></a> Building the query
-
-### <a name="createMethods"></a> CREATE Methods
 
 #### <a name="create"></a> create(...patterns)
 
@@ -159,6 +159,23 @@ query.mergeRel({alias: 'friendship', type: 'friend of'}) // MERGE ()->[friendshi
 
 ### <a name="deleteMethods"></a> DELETE methods
 
+#### <a name="delete"></a> delete(aliases)
+
+~~~js
+
+query.delete({alias: 'friend'}) // DELETE (friend)
+~~~
+
+### <a name="returnMethods"></a> RETURN methods
+
+#### <a name="return"></a> return([aliases])
+
+~~~js
+
+query.return() // RETURN *
+query.return('node') // RETURN node
+query.return('node.prop') // RETURN node.prop
+~~~
 
 ### WHERE
 

@@ -13,12 +13,12 @@ module.exports = class CypherTools{
 		}
 
 		if(!options.compact){
-			_queryString = _queryString.replace(new RegExp('[^N] MATCH', 'g'), ' \nMATCH')
+			_queryString = _queryString.replace(new RegExp(' CREATE', 'g'), '\nCREATE')
+			_queryString = _queryString.replace(new RegExp(' MATCH', 'g'), '\nMATCH')
 			_queryString = _queryString.replace(new RegExp(' MERGE', 'g'), ' \nMERGE')
-			_queryString = _queryString.replace(new RegExp(' ON', 'g'), ' \nON')
 			_queryString = _queryString.replace(new RegExp(' SET', 'g'), ' \nSET')
 			_queryString = _queryString.replace(new RegExp(' REMOVE', 'g'), ' \nREMOVE')
-			_queryString = _queryString.replace(new RegExp('[^H] DELETE', 'g'), ' \nDELETE')
+			_queryString = _queryString.replace(new RegExp(' DELETE', 'g'), ' \nDELETE')
 			_queryString = _queryString.replace(new RegExp(' DETACH', 'g'), ' \nDETACH')
 			_queryString = _queryString.replace(' RETURN', ' \nRETURN')
 			console.log()

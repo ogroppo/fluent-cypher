@@ -477,13 +477,9 @@ module.exports = class CypherQuery extends CypherTools{
 	return(...aliases){
 		if(aliases.length){
 			this.queryString += `RETURN ${formatAlias(aliases)} `
-		}
-
-		return this
-	}
-
-	returnAll(){
-		this.queryString += `RETURN * `
+		}else{
+      this.queryString += `RETURN * `
+    }
 
 		return this
 	}
