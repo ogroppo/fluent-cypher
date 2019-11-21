@@ -1,6 +1,15 @@
-const {isNotObject, isNotString, isNotURL, isNotPositive, isNotUndefined, isNotEmptyObject} = require('isnot')
+const {
+  isNotObject,
+  isObject,
+  isName,
+  isNotString,
+  isNotURL,
+  isNotPositive,
+  isNotUndefined,
+  isNotEmptyObject
+} = require('isnot')
 const {formatNode, formatNodeAliasLabels} = require('./lib/node')
-const {formatProps, formatPropKeys, formatPropsParams, formatCreatedAt, formatCreatedBy, formatUpdatedAt, formatUpdatedBy, formatMatchedAt, formatMatchedCount, formatOrderBy} = require('./lib/props')
+const {formatPropKeys, formatCreatedAt, formatCreatedBy, formatUpdatedAt, formatUpdatedBy, formatMatchedAt, formatMatchedCount, formatOrderBy} = require('./lib/props')
 const {formatAlias} = require('./lib/alias')
 const {formatList} = require('./lib/utils')
 
@@ -132,7 +141,7 @@ module.exports = class CypherQuery extends CypherTools{
 
 	matchNode(node = {}, options = {}){
 		if(isNotObject(node))
-			throw "matchNode: node must be object"
+			throw new TypeError("matchNode: node must be object")
 
 		if(this.config.defaultNodeProps)
 			node = this._extend(this.config.defaultNodeProps, node)
@@ -153,7 +162,7 @@ module.exports = class CypherQuery extends CypherTools{
 
 		let sets = []
 		if(options.setProps)
-			sets.push(formatProps(node, options.setProps))
+			sets.push(this._formatPropsParams(node.alias, options.setProps))
 
 		if(options.setLabels)
 			sets.push(formatNodeAliasLabels(node, options.setLabels))
@@ -166,26 +175,6 @@ module.exports = class CypherQuery extends CypherTools{
 
 			this.set(...sets)
 		}
-
-		return this
-	}
-
-	matchPath(options = {}){
-
-		options.pathAlias = options.pathAlias || 'path'
-
-		options.parentNode = {
-			alias: 'parent'
-		}
-
-		options.rel = options.rel || {}
-		options.rel.depth = options.rel.depth || '*'
-
-		options.childNode = {
-			alias: 'child'
-		}
-
-		this.match(options.pathAlias + " = "+this._node(options.parentNode)+this._rel(options.rel)+this._node(options.childNode))
 
 		return this
 	}
@@ -204,7 +193,11 @@ module.exports = class CypherQuery extends CypherTools{
 	matchPattern(parent, rel, child, options = {}){
 
 		this.optional(options.optional)
-		this.match(this._pattern(parent, rel, child))
+    const _pattern = this._pattern(parent, rel, child)
+		this.match(
+      (options.pathAlias ? options.pathAlias + " = " : '') +
+      (options.shortestPath ? `shortestPath(${_pattern})` : _pattern)
+    )
 
 		return this
 	}
@@ -226,7 +219,7 @@ module.exports = class CypherQuery extends CypherTools{
 
 		let sets = []
 		if(options.setProps)
-			sets.push(formatProps(rel, options.setProps))
+			sets.push(this._formatPropsParams(rel.alias, options.setProps))
 
 		if(sets.length || removes.length){
 			if(this.config.timestamps)
@@ -262,9 +255,13 @@ module.exports = class CypherQuery extends CypherTools{
 		return this
 	}
 
-	mergeChild(child, rel = {}, options = {}){
-		if(!rel || !rel.type)
-			throw "mergeChild: rel.type is required"
+	mergeChild(rel, child, options = {}){
+		if(!rel)
+			throw Error("mergeChild: rel is required")
+		if(!rel.type)
+			throw Error("mergeChild: rel.type is required")
+    if(!child)
+      throw Error("mergeChild: child is required")
 
 		if(this.config.defaultNodeProps)
 			child = this._extend(this.config.defaultNodeProps, child)
@@ -298,7 +295,7 @@ module.exports = class CypherQuery extends CypherTools{
 		if(this.config.userId)
 			onCreateSets.push(formatCreatedBy(node.alias, this.config.userId))
 		if(options.onCreateSet)
-			onCreateSets.push(formatProps(node, options.onCreateSet))
+			onCreateSets.push(this._formatPropsParams(node.alias, options.onCreateSet))
 		if(onCreateSets.length)
 			this.onCreateSet(...onCreateSets)
 
@@ -308,7 +305,7 @@ module.exports = class CypherQuery extends CypherTools{
 		if(this.config.matchedCount)
 			onMatchSets.push(formatMatchedCount(node))
 		if(options.onMatchSet)
-			onMatchSets.push(formatProps(node, options.onMatchSet))
+			onMatchSets.push(this._formatPropsParams(node.alias, options.onMatchSet))
 		if(onMatchSets.length)
 			this.onMatchSet(...onMatchSets)
 
@@ -381,7 +378,7 @@ module.exports = class CypherQuery extends CypherTools{
 		if(this.config.matchedCount)
 			onMatchSets.push(formatMatchedCount(rel))
 		if(options.onMatchSet)
-			onMatchSets.push(formatProps(rel, options.onMatchSet))
+			onMatchSets.push(this._formatPropsParams(rel.alias, options.onMatchSet))
 		if(onMatchSets.length)
 			this.onMatchSet(...onMatchSets)
 
@@ -391,13 +388,13 @@ module.exports = class CypherQuery extends CypherTools{
 		if(this.config.userId)
 			onCreateSets.push(formatCreatedBy(rel))
 		if(options.onCreateSet)
-			onCreateSets.push(formatProps(rel, options.onCreateSet))
+			onCreateSets.push(this._formatPropsParams(rel.alias, options.onCreateSet))
 		if(onCreateSets.length)
 			this.onCreateSet(...onCreateSets)
 
 		var sets = []
 		if(options.set)
-			sets.push(formatProps(rel, options.set))
+			sets.push(this._formatPropsParams(rel.alias, options.set))
 
 		if(sets.length)
 			this.set(...sets)
@@ -438,22 +435,6 @@ module.exports = class CypherQuery extends CypherTools{
 	optionalMatchRel(rel = {}, options = {}){
 		options.optional = true
 		return this.matchRel(rel, options)
-	}
-
-	or(...args){
-		if(args.length){
-			if(!this._whereClauseUsed){
-				this.queryString += `WHERE `
-				this._whereClauseUsed = true
-			}else{
-				this.queryString += `OR `
-			}
-
-			this.queryString += `${formatList(args, ' OR ')} `
-
-		}
-
-		return this
 	}
 
 	orderBy(...props){
@@ -554,84 +535,63 @@ module.exports = class CypherQuery extends CypherTools{
 		return this
 	}
 
-	where(...args){
-		if(args.length){
-			if(!this._whereClauseUsed){
-				this.queryString += `WHERE `
-				this._whereClauseUsed = true
-			}else{
-				this.queryString += `AND `
-			}
+  unwind(data, alias = ''){
+    if(!data)
+      throw new Error("unwind: must have data")
 
-			this.queryString += `${formatList(args, ' AND ')} `
+    this.queryString += `UNWIND {${this._getParamKey('data', data)}} `
 
+    if(alias)
+      this.queryString += `as ${alias} `
+
+		return this
+  }
+
+	where(arg, options = {}){
+		if(!arg)
+      throw new Error("where: must have arg")
+
+    options.divider = (options.divider || "AND").trim()
+		if(!this._whereClauseUsed){
+			this.queryString += `WHERE `
+			this._whereClauseUsed = true
+		}else{
+			this.queryString += `${options.divider} `
 		}
+
+    const alias = options.alias || this.currentAlias
+    if(isObject(arg))
+		  this.queryString += `${this._formatPropsParams(alias, arg, options.compare, ` ${options.divider} `)} `
+    else if(isName(arg))
+      this.queryString += `${arg} `
+    else
+      throw new TypeError("where: arg type not valid")
+
 
 		return this
 	}
 
-	whereProp(prop){
-		if(prop){
-			this.where(formatProps({alias: this.currentAlias}, prop))
-		}
+  whereNot(arg){
+    if(!arg)
+      throw new Error("whereNot: must have arg")
 
-		return this
-	}
+    this.where(`NOT ${arg}`)
 
-	wherePropGreater(prop){
-		if(prop){
-			this.where(formatProps({alias: this.currentAlias}, prop, ">"))
-		}
-
-		return this
-	}
-
-	wherePropIn(prop){
-		if(prop){
-			this.where(formatProps({alias: this.currentAlias}, prop, "IN"))
-		}
-
-		return this
-	}
-
-	wherePropRegexp(props){
-		if(props){
-			let a = []
-			for(let propKey in props){
-				a.push(`${this.currentAlias}.${propKey} =~ {${this._getParamKey(propKey, props[propKey])}}`)
-			}
-
-			this.where(...a)
-		}
-
-		return this
-	}
+    return this
+  }
 
 	with(...args){
-		if(args.length)
-			this.queryString += `WITH ${formatList(args)} `
+		if(!args.length)
+      throw new Error("with: argument required")
+
+		this.queryString += `WITH ${formatList(args)} `
 
 		return this
 	}
 
-	withNode(nodeAlias){
+	withNode(nodeAlias = ''){
+
 		this.queryString += `WITH ${nodeAlias || this._getCurrentNodeAlias()} `
-
-		return this
-	}
-
-	xor(...args){
-		if(args.length){
-			if(!this._whereClauseUsed){
-				this.queryString += `WHERE `
-				this._whereClauseUsed = true
-			}else{
-				this.queryString += `XOR `
-			}
-
-			this.queryString += `${formatList(args, ' XOR ')} `
-
-		}
 
 		return this
 	}

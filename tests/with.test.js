@@ -1,8 +1,8 @@
 import test from 'ava';
 import CypherQuery from '../index';
 
-test('with default', t => {
-	t.is(new CypherQuery().with().queryString, '')
+test('with throws no arg', t => {
+	t.throws(() => new CypherQuery().with())
 });
 
 test('with arguments', t => {

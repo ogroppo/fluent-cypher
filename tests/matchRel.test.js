@@ -30,5 +30,5 @@ test('Match rel with alias, properties, reserved field, set options, remove opti
 		{alias: 'rello', direction: false, type: 'KNOWS', jesus: 'christ', createdBy: 123, createdAt: 123123123},
 		{startAlias: 'dad', endAlias: 'Kid', setProps: {cane: 'morto'}, removeProps: ['ladro']}
 	);
-	t.is(query.queryString, 'MATCH (dad)-[rello:`KNOWS` {jesus:{jesus0}, createdBy:{createdBy1}, createdAt:{createdAt2}}]-(Kid) REMOVE rello.ladro SET rello.cane = "morto", rello.updatedAt = timestamp() ');
+	t.is(query.queryString, 'MATCH (dad)-[rello:`KNOWS` {jesus:{jesus0}, createdBy:{createdBy1}, createdAt:{createdAt2}}]-(Kid) REMOVE rello.ladro SET rello.cane = {cane3}, rello.updatedAt = timestamp() ');
 });

@@ -33,5 +33,12 @@ test('mergeRel all props + chain', t => {
 		}
 	)
 	.mergeRel('unkle', {type: 'name'}, 'bunkle');
-	t.is(query.queryString, 'MERGE (parent)-[rel:`mane` {name:{name0}}]->(child) ON MATCH SET rel.matchedAt = timestamp(), rel.matchCount = coalesce(rel.matchCount, 1) + 1, rel.test = "bla", rel.jhonny = 2 ON CREATE SET rel.createdAt = timestamp(), rel.created = "prop", rel.other = false SET rel.bim = "bam", rel.bum = 200 MERGE (unkle)-[rel1:`name`]->(bunkle) ON MATCH SET rel1.matchedAt = timestamp(), rel1.matchCount = coalesce(rel1.matchCount, 1) + 1 ON CREATE SET rel1.createdAt = timestamp() ');
+	t.is(query.queryString, "MERGE (parent)-[rel:`mane` {name:{name0}}]->(child) " +
+  "ON MATCH SET rel.matchedAt = timestamp(), rel.matchCount = " +
+  "coalesce(rel.matchCount, 1) + 1, rel.test = {test1}, rel.jhonny = {jhonny2} " +
+  "ON CREATE SET rel.createdAt = timestamp(), rel.created = {created3}, " +
+  "rel.other = {other4} SET rel.bim = {bim5}, rel.bum = {bum6} MERGE " +
+  "(unkle)-[rel1:`name`]->(bunkle) ON MATCH SET rel1.matchedAt = timestamp(), " +
+  "rel1.matchCount = coalesce(rel1.matchCount, 1) + 1 ON CREATE SET " +
+  "rel1.createdAt = timestamp() ");
 });

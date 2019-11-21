@@ -20,6 +20,8 @@ module.exports = class CypherTools{
 			_queryString = _queryString.replace(new RegExp(' REMOVE', 'g'), ' \nREMOVE')
 			_queryString = _queryString.replace(new RegExp(' DELETE', 'g'), ' \nDELETE')
 			_queryString = _queryString.replace(new RegExp(' DETACH', 'g'), ' \nDETACH')
+			_queryString = _queryString.replace(new RegExp(' WHERE', 'g'), ' \nWHERE')
+			_queryString = _queryString.replace(new RegExp(' WITH', 'g'), ' \nWITH')
 			_queryString = _queryString.replace(' RETURN', ' \nRETURN')
 			console.log()
 		}
@@ -48,16 +50,24 @@ module.exports = class CypherTools{
 		return paramKey
 	}
 
-	_formatPropsParams(alias, props, operator = "=", divider = ", ") {
-		var a = []
-		for (var key in props) {
-			a.push(`${alias}.${key} ${operator} {${this._getParamKey(key, props[key])}}`);
-		}
+	_formatPropsParams(alias, props, comparison = "=", divider = ", ") {
+    var a = []
+  	for (var key in props) {
+  		var val = props[key]
+      let propString = `${alias}.${key} ${comparison}`
+      if(comparison.toLowerCase() !== 'is null' && comparison.toLowerCase() !== 'is not null')
+        propString += ` {${this._getParamKey(key, val)}}`
+  		a.push(propString);
+  	}
 
-		return a.join(divider)
+  	return a.join(divider)
 	}
 
 	_node(node = {}){
+    if(isName(node)){
+      return `(${node})`
+    }
+
 		if(isName(node.label)){
 			node.labels = node.labels || []
 			node.labels.push(node.label)
@@ -75,6 +85,10 @@ module.exports = class CypherTools{
 	}
 
 	_rel(rel = {}){
+    if(isName(rel)){
+      return `(${rel})`
+    }
+
 		let paramMap = {}
 		for(let relPropKey in rel){
 			if(relMetaFields.includes(relPropKey))
@@ -156,7 +170,7 @@ module.exports = class CypherTools{
 
 	_getCurrentNodeAlias(){
 		if(!this.nodeAliases.length)
-			throw "Trying to get current node alias, that not exists"
+			throw new Error("Trying to get current node alias, that not exists")
 
 		return this.nodeAliases[this.nodeAliases.length - 1]
 	}

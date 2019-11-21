@@ -31,5 +31,5 @@ test('Match node with alias, label, labels, properties, reserved field, set opti
 		{alias: 'box', label: 'Box', labels: ['hey', 'you too'], type: 'content', createdBy: 123, createdAt: 123123123},
 		{setProps: {cane: 'morto'}, removeProps: ['ladro'], setLabels: ['Bimbo'], removeLabels: ['GG', 'SS']}
 	);
-	t.is(query.queryString, 'MATCH (box:`hey`:`you too`:`Box` {type:{type0}, createdBy:{createdBy1}, createdAt:{createdAt2}}) REMOVE box.ladro, box:`GG`:`SS` SET box.cane = "morto", box:`Bimbo` ');
+	t.is(query.queryString, 'MATCH (box:`hey`:`you too`:`Box` {type:{type0}, createdBy:{createdBy1}, createdAt:{createdAt2}}) REMOVE box.ladro, box:`GG`:`SS` SET box.cane = {cane3}, box:`Bimbo` ');
 });
