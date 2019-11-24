@@ -42,12 +42,12 @@ Following the official documentation it is better to avoid literals so everythin
 
 ```js
 const CypherQuery = require('fluent-cypher');
+//or
+import CypherQuery from 'fluent-cypher'
 
 var query = new CypherQuery();
 
-query.queryString // ''
-query.queryParams // {}
-
+//let's start building our query!
 ```
 
 #### <a name="constructor"></a> constuctor([config])
@@ -66,7 +66,7 @@ query.queryParams // {}
 
 #### <a name="create"></a> create(...patterns)
 
-Generic method that accepts custom strings as patterns
+Accepts pattern as string
 
 ~~~js
 
@@ -76,31 +76,19 @@ query.create("(node)", "()->[rel]->()") // 'CREATE (node), ()->[rel]->()'
 
 ~~~
 
-#### <a name="createNode"></a> createNode([cypherNode] [, options])
-
-Accepts object with properties, labels, alias.
+As Object for node
 
 ~~~js
 
-query.createNode() // CREATE (node)
-
-query.createNode({alias: 'myNode', label: 'Obj', labels: ['a label', 'fancy label']}) // CREATE (myNode:`Obj`:`a label`:`fancy label`)
-
+query.create({alias: 'node'}) // 'CREATE (node)'
 ~~~
 
-#### <a name="createRel"></a> createRel([cypherRel] [, options])
-
-Accepts object with properties, labels, alias.
+As Array for paths
 
 ~~~js
 
-query.createRel() // CREATE ()->[rel]->()
-
-query.createRel({alias: 'myRel', type: 'REL', myProp: 'myVal'}) // CREATE ()->[myRel:`REL` {myProp:'myVal'}]->()
-
+query.create([{alias: 'parent'}, {type: 'has'}, {alias: 'child'}]) // 'CREATE (parent)-[:has]->(child)'
 ~~~
-
-### <a name="matchMethods"></a> MATCH methods
 
 #### <a name="match"></a> match(...patterns)
 
@@ -112,28 +100,6 @@ query.match("(node)", "()->[rel]->()") // MATCH (node), ()->[rel]->()
 
 ~~~
 
-#### <a name="matchNode"></a> matchNode([cypherNode] [, options])
-
-~~~js
-
-query.matchNode() // MATCH (node)
-
-query.matchNode({alias: 'myNode', label: 'Obj', labels: ['this', 'fancy label']}) // MATCH (myNode:`Obj`:`this`:`fancy label`)
-
-~~~
-
-#### <a name="matchRel"></a> matchRel([cypherRel] [, options])
-
-~~~js
-
-query.matchRel() // MATCH ()->[rel]->()
-
-query.matchRel({alias: 'myRel', type: 'REL'}) // MATCH ()->[rel:`REL`]->()
-
-~~~
-
-### <a name="mergeMethods"></a> MERGE methods
-
 #### <a name="merge"></a> merge(...patterns)
 
 ~~~js
@@ -143,35 +109,12 @@ query.merge("(node)") // MERGE (node)
 query.merge("(node)", "()->[rel:`type`]->()") // MERGE (node), ()->[rel:`type`]->()
 
 ~~~
-
-#### <a name="mergeNode"></a> mergeNode([cypherNode] [, options])
-
-~~~js
-
-query.mergeNode() // MERGE (node)
-
-query.mergeNode({alias: 'email', name: 'spam@email.com', label: 'Email', labels: ['Verified', 'Blocked']}) // MERGE (email:`Email`:`Verified`:`Blocked`)
-
-~~~
-
-#### <a name="mergeRel"></a> mergeRel(cypherRel [, options])
-
-~~~js
-
-query.mergeRel({alias: 'friendship', type: 'friend of'}) // MERGE ()->[friendship:`friend of`]->()
-
-~~~
-
-### <a name="deleteMethods"></a> DELETE methods
-
 #### <a name="delete"></a> delete(aliases)
 
 ~~~js
 
 query.delete({alias: 'friend'}) // DELETE (friend)
 ~~~
-
-### <a name="returnMethods"></a> RETURN methods
 
 #### <a name="return"></a> return([aliases])
 
@@ -182,24 +125,11 @@ query.return('node') // RETURN node
 query.return('node.prop') // RETURN node.prop
 ~~~
 
-### WHERE
-
-- IN
-
-- STARTS WITH
-
-- ENDS WITH
-
-- Regexp
-
-Provide your own custom regexp
-
-
-NB: You need to escape the regexp youself! It might not throw an error but results will be wrong, use built in function
+### <a name="where"></a> where
 
 ~~~js
 
-query.matchNode().wherePropRegexp({
+query.where({
 	propName: `(?i).*${query._escapeStringRegexp("{}+&?!")}.*`,
 	otherPropName: "(?g).*doesNotNeedToBeEscaped.*",
 })
@@ -213,9 +143,9 @@ As `query.queryString` is a parametrised string you may want to print a string t
 ~~~js
 
 query
-	.matchNode()
+	.match()
 	.debug()     // => MATCH (node)
-	.matchRel()
+	.match()
 	.debug()    // => MATCH (node) MATCH ()-[rel]->()
 
 ~~~
