@@ -14,30 +14,27 @@ Following the official documentation it is better to avoid literals so everythin
 * [Usage](#usage)
 	* [constuctor()](#constuctor)
 * [Building the query](#building)
-	* [CREATE](#createMethods)
-		* [create()](#create)
-		* [createNode()](#createNode)
-		* [createPattern()](#createPattern)
-	* [MATCH](#matchMethods)
-		* [match()](#match)
-		* [matchNode()](#matchNode)
-		* [matchChild()](#matchChild)
-		* [matchParent()](#matchParent)
-		* [matchPattern()](#matchPattern)
-	* [MERGE](#mergeMethods)
-		* [merge()](#merge)
-		* [mergeNode()](#mergeNode)
-		* [mergeChild()](#mergeChild)
-		* [mergeParent()](#mergeParent)
-		* [mergePattern()](#mergePattern)
-	* [DELETE](#deleteMethods)
-		* [delete()](#delete)
-		* [deleteNode()](#deleteNode)
-		* [deleteRel()](#deleteRel)
-		* [detachDelete()](#detachDelete)
-		* [detachDeleteNode()](#detachDeleteNode)
-  * [RETURN](#returnMethods)
-  	* [return()](#return)
+	* [create()](#create)
+	* [match()](#match)
+	* [optionalMatch()](#optionalMatch)
+	* [where()](#where)
+	* [merge()](#merge)
+	* [onCreateSet()](#onCreateSet)
+	* [onMergeSet()](#onMergeSet)
+	* [set()](#set)
+	* [remove()](#remove)
+	* [delete()](#delete)
+	* [detachDelete()](#detachDelete)
+  * [return()](#return)
+  * [returnDistinct()](#returnDistinct)
+  * [limit()](#limit)
+  * [skip()](#skip)
+  * [orderBy()](#orderBy)
+  * [unwind()](#unwind)
+  * [with()](#with)
+  * [union()](#union)
+  * [unionAll()](#unionAll)
+  * [loadCsv()](#loadCsv)
 * [Debug](#debug)
 * [Tests](#tests)
 
@@ -57,9 +54,13 @@ query.queryParams // {}
 
 | Option        | Type           | Description
 | ------------- |:-------------:| :-----|
-| ` timestamps ` | `Boolean` | timestamps will be added for you like `alias.createdAt = timestamp()` and `alias.updatedAt = timestamp()` |
+| `onCreateSetTimestamp` | `Boolean` | timestamps will be added for you like `alias.createdAt = timestamp()`|
+| `onUpdateSetTimestamp` | `Boolean` | timestamps will be added for you like `alias.updatedAt = timestamp()`|
 | `userId`      | `String`      |  Property will be set like `alias.createdBy = {userId}` and `alias.updatedBy = {userId}`
-| `defaultNodeProps`      | `Object`      | default props for node
+| `defaultNodeProps`      | `Object`      | default props for every node
+| `forcetNodeProps`       | `Object`      | force props for every node
+| `defaultRelProps`      | `Object`      | default props for every relationship
+| `forcetRelProps`       | `Object`      | force props for every relationship
 
 ## <a name="building"></a> Building the query
 

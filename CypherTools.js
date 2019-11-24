@@ -1,36 +1,10 @@
-const {isName, isNotVariableName} = require('isnot')
-const {formatNode, nodeMetaFields} = require('./lib/node')
-const {formatRel, relMetaFields} = require('./lib/rel')
+const {isName, isString, isNotName, isNotVariableName, isObject, isArray, isEven, isDate} = require('isnot')
+const relMetaFields = require('./constants/relMetaFields')
+const nodeMetaFields = require('./constants/nodeMetaFields')
+const booleanOPerators = require('./constants/booleanOPerators')
+const predicateFunctions = require('./constants/predicateFunctions')
 
 module.exports = class CypherTools{
-	debug(options = {}){
-
-		let _queryString = this.queryString
-
-		let _queryParams = this.queryParams
-		for(let param in _queryParams){
-			_queryString = _queryString.replace(new RegExp(`{${param}}`, 'g'), JSON.stringify(_queryParams[param]) )
-		}
-
-		if(!options.compact){
-			_queryString = _queryString.replace(new RegExp(' CREATE', 'g'), '\nCREATE')
-			_queryString = _queryString.replace(new RegExp(' MATCH', 'g'), '\nMATCH')
-			_queryString = _queryString.replace(new RegExp(' MERGE', 'g'), ' \nMERGE')
-			_queryString = _queryString.replace(new RegExp(' SET', 'g'), ' \nSET')
-			_queryString = _queryString.replace(new RegExp(' REMOVE', 'g'), ' \nREMOVE')
-			_queryString = _queryString.replace(new RegExp(' DELETE', 'g'), ' \nDELETE')
-			_queryString = _queryString.replace(new RegExp(' DETACH', 'g'), ' \nDETACH')
-			_queryString = _queryString.replace(new RegExp(' WHERE', 'g'), ' \nWHERE')
-			_queryString = _queryString.replace(new RegExp(' WITH', 'g'), ' \nWITH')
-			_queryString = _queryString.replace(' RETURN', ' \nRETURN')
-			console.log()
-		}
-
-		console.log(_queryString)
-
-		return this
-	}
-
 	_extend(...objects){
 		return Object.assign({}, ...objects)
 	}
@@ -46,62 +20,378 @@ module.exports = class CypherTools{
 		}
 
 		let paramKey = propKey + Object.keys(this.queryParams).length
-		this.queryParams[paramKey] = propVal
+		this.queryParams[paramKey] = isDate(propVal) ? propVal.toISOString() : propVal
 		return paramKey
 	}
 
-	_formatPropsParams(alias, props, comparison = "=", divider = ", ") {
-    var a = []
-  	for (var key in props) {
-  		var val = props[key]
-      let propString = `${alias}.${key} ${comparison}`
-      if(comparison.toLowerCase() !== 'is null' && comparison.toLowerCase() !== 'is not null')
-        propString += ` {${this._getParamKey(key, val)}}`
-  		a.push(propString);
-  	}
+  _getParamMap(metaFields, element){
+    let paramMap = {}
+    for(let key in element){
+      if(metaFields.includes(key))
+        continue
 
-  	return a.join(divider)
-	}
+      paramMap[key] = this._getParamKey(key, element[key])
+    }
+    return paramMap
+  }
 
-	_node(node = {}){
+  _formatCypherOrderBy(props){
+  	var propsList = [];
+
+  	props.forEach(prop => {
+      if(isName(prop))
+        return propsList.push(prop)
+      if(isObject(prop)){
+        var proplist = []
+        for (var key in prop) {
+          if(key === 'alias')
+          continue
+
+          let propString = `${prop.alias}.${key} `
+          propString += prop[key] //sort order
+
+          proplist.push(propString);
+        }
+        return propsList.push(proplist.join(', '));
+      }
+
+      throw new Error("_formatCypherOrderBy: invalid prop type")
+  	});
+
+  	return propsList.join(', ');
+  }
+
+  _formatCypherRemove(removeItems){
+    var itemList = [];
+
+    removeItems.forEach(removeItem => {
+      if(isName(removeItem))
+        return itemList.push(removeItem)
+      if(isObject(removeItem)){
+        if(!removeItem.alias)
+          throw new Error("_formatCypherRemove: alias is required here")
+        let removeItemList = []
+        var labels = removeItem.labels || []
+        var props = removeItem.props || []
+        if(removeItem.label)
+          labels.push(removeItem.label)
+        if(removeItem.prop)
+          props.push(removeItem.prop)
+
+        if(labels.length){
+          removeItemList.push(this._formatCypherAliasLabels(removeItem.alias, labels))
+        }
+
+        props.forEach(prop => removeItemList.push(`${removeItem.alias}.${prop}`))
+
+        return itemList.push(removeItemList.join(', '));
+      }
+
+      throw new Error("_formatCypherRemove: invalid prop type")
+    });
+
+    return itemList.join(', ');
+  }
+
+  _formatCypherAliasAsItems(items){
+    var itemList = [];
+
+    items.forEach(item => {
+      if(isName(item))
+        return itemList.push(item)
+      if(isObject(item)){
+        if(!item.alias)
+          throw new Error("_formatCypherAliasAsItems: alias is required for object item")
+
+        let returnItemList = []
+        let string = item.alias
+        if(item.as)
+          string += ` as ${item.as}`
+
+        return itemList.push(string);
+      }
+
+      throw new Error("_formatCypherAliasAsItems: invalid prop type")
+    });
+
+    return itemList.join(', ');
+  }
+
+  _formatCypherLabels(labels = []){
+    var cypherLabelString = ''
+
+  	labels.forEach(label => {
+  		cypherLabelString += this._formatCypherLabel(label)
+  	})
+
+  	return cypherLabelString
+  }
+
+  _formatCypherAliasLabels(alias, labels){
+    if(isNotName(alias))
+  		throw new Error("_formatCypherAliasLabels: alias required")
+
+    return `${alias}${this._formatCypherLabels(labels)}`
+  }
+
+  _formatCypherLabel(label){
+    if(isNotName(label))
+  		throw new Error("_formatCypherLabel: label must be a valid string")
+
+  	return ":`"+label+"`"
+  }
+
+  _formatCypherPatterns(patterns){
+    let list = []
+    patterns.forEach(pattern => {
+      if(isName(pattern))
+        return list.push(pattern)
+      if(isObject(pattern))
+        return list.push(this._formatCypherNode(pattern))
+      if(isArray(pattern))
+        return list.push(this._formatCypherPath(...pattern))
+
+      throw new TypeError("_formatCypherPatterns: pattern has not valid type")
+    })
+    return list.join(', ')
+  }
+
+  _formatCypherWhereGroups(items){
+    let list = []
+    items.forEach(item => {
+      if(isName(item))
+        return list.push(item)
+      if(isObject(item))
+        return list.push(this._formatCypherPropItem(item, ' AND '))
+      if(isArray(item)){
+        if(item.some(subItem => booleanOPerators.includes(subItem))){
+          let subList = []
+          item.forEach(subItem => {
+            if(isName(subItem))
+              subList.push(subItem)
+            if(isObject(subItem))
+              subList.push(this._formatCypherPropItem(subItem, ' AND '))
+            if(isArray(subItem))
+              subList.push(this._formatCypherPath(...subItem))
+          })
+          list.push(`(${subList.join(' ')})`)
+        }else{
+          list.push(this._formatCypherPath(...item))
+        }
+        return
+      }
+
+      throw new TypeError("_formatCypherWhereGroup: invalid item type")
+    })
+
+    return list.join(' ')
+  }
+
+	_formatCypherNode(node = {}){
     if(isName(node)){
       return `(${node})`
     }
 
-		if(isName(node.label)){
-			node.labels = node.labels || []
-			node.labels.push(node.label)
-		}
-
-		let paramMap = {}
-		for(let nodePropKey in node){
-			if(nodeMetaFields.includes(nodePropKey))
-				continue
-
-			paramMap[nodePropKey] = this._getParamKey(nodePropKey, node[nodePropKey])
-		}
-
-		return formatNode(node, paramMap)
-	}
-
-	_rel(rel = {}){
-    if(isName(rel)){
-      return `(${rel})`
+    if(isName(node.alias) && isNotVariableName(node.alias)){
+      throw new Error(`_formatCypherNode: invalid alias => ${node.alias}`)
     }
 
-		let paramMap = {}
-		for(let relPropKey in rel){
-			if(relMetaFields.includes(relPropKey))
-				continue
+    let _node = {
+      ...this.config.defaultNodeProps,
+      ...node,
+      ...this.config.forceNodeProps
+    }
 
-			paramMap[relPropKey] = this._getParamKey(relPropKey, rel[relPropKey])
+		if(isName(_node.label)){
+			_node.labels = _node.labels || []
+			_node.labels.push(_node.label)
 		}
 
-		return formatRel(rel, paramMap)
+    let string = `(`
+    if(_node.alias)
+      string += _node.alias
+    string += this._formatCypherLabels(_node.labels)
+    string += this._formatParamsMap(nodeMetaFields, _node)
+    string += `)`
+
+		return string
 	}
 
-	_pattern(parentNode, rel, childNode){
-		return this._node(parentNode)+this._rel(rel)+this._node(childNode)
+  _formatParamsMap(metaFields, element){
+    const paramsMap = this._getParamMap(metaFields, element)
+
+  	let propsString = ''
+
+  	if(Object.keys(paramsMap).length){
+  		propsString = '{'
+  		let propsArray = []
+  		for(let propKey in paramsMap){
+  			propsArray.push(`${propKey}:{${paramsMap[propKey]}}`)
+  		}
+  		propsString += propsArray.join(', ')
+  		propsString += '}'
+  	}
+
+  	return propsString
+  }
+
+  _formatCreatedAt(elements){
+    return elements.filter(element => isObject(element)).map(element => {
+      return `${element.alias}.createdAt = timestamp()`
+    }).join(', ')
+  }
+
+  _formatAliases(aliases){
+    return aliases.map(alias => this._formatAlias(alias)).join(', ')
+  }
+
+  _formatAlias(alias){
+    var aliasString = '';
+
+  	if(isString(alias)){ //eg alias = 'node' or 'node.prop' or 'node.prop as myNode'
+  		aliasString = alias;
+  	}
+
+  	if(isObject(alias)){ //eg alias = {alias: 'something', prop: 'name', as: 'node'}
+  		if(!alias.alias) return aliasString; //the rest will not make sense
+
+  		aliasString = alias.alias;
+  		if(alias.prop)
+  			aliasString += "."+alias.prop;
+  		if(alias.as)
+  			aliasString += " as "+alias.as;
+  	}
+
+  	return aliasString;
+  }
+
+  _formatCypherPropItems(items) {
+    let list = []
+    items.forEach(item => {
+      if(isName(item))
+        return list.push(item)
+      if(isObject(item))
+        return list.push(this._formatCypherPropItem(item))
+
+      throw new TypeError("_formatCypherPropItems: invalid items type")
+    })
+
+    return list.join(', ')
+  }
+
+  _formatCypherPropItem(item, joint = ', ') {
+    var list = []
+
+    let labels = item.labels || []
+    if(item.label)
+      labels.push(item.label)
+
+    if(labels.length)
+      list.push(this._formatCypherAliasLabels(item.alias, labels))
+
+    for (var key in item) {
+      if(nodeMetaFields.includes(key))
+        continue
+
+      let propString = `${item.alias}.${key}`
+
+      let comparisonOperator
+      let val = item[key]
+      if(isObject(val)){
+        let operand = Object.keys(val)[0]
+        if(predicateFunctions.includes(operand)){
+          propString = `${operand}(${propString})`
+        }else{
+          comparisonOperator = operand
+          val = val[operand]
+        }
+      }else{
+        if(isString(val) && (val.toLowerCase() === 'is null' || val.toLowerCase() === 'is not null'))
+          propString += ` ${val}`
+        else
+          comparisonOperator = '='
+      }
+
+      if(comparisonOperator)
+        propString += ` ${comparisonOperator} {${this._getParamKey(key, val)}}`
+
+      list.push(propString);
+    }
+
+    return list.join(joint)
+  }
+
+	_formatCypherRel(rel = {}){
+    if(isName(rel)){
+      return `-[${rel}]->`
+    }
+
+    if(isName(rel.type) && isNotVariableName(rel.type)){
+      throw new Error(`_formatCypherRel: invalid type => ${rel.type}`)
+    }
+
+    let _rel = {
+      ...this.config.defaultRelProps,
+      ...rel,
+      ...this.config.forceRelProps
+    }
+
+    let relString = ''
+  	if(_rel.direction === 'left')
+  		relString += '<'
+
+  	relString += '-['
+
+  	if(_rel.alias)
+  		relString += _rel.alias
+
+  	if(_rel.type)
+  		relString += ":`"+_rel.type+"`"
+
+  	if(_rel.depth){ //can be *, *1
+  		relString += '*'
+  		if(_rel.depth !== '*' && _rel.depth !== 'any')
+  			relString += _rel.depth
+  	}else if(_rel.minDepth || _rel.maxDepth){ //can *1..2, *..2, *2..
+  		relString += '*'
+  		if(_rel.minDepth)
+  			relString += _rel.minDepth
+  		relString += '..'
+  		if(_rel.maxDepth)
+  			relString += rel.maxDepth
+  	}
+
+  	relString += this._formatParamsMap(relMetaFields, _rel)
+
+  	relString += "]-"
+
+  	if(_rel.direction === undefined || _rel.direction === 'right')
+  		relString += ">"
+
+  	return relString
+	}
+
+	_formatCypherPath(...elements){
+    let options = {}
+    let _path = ''
+    if(isEven(elements.length))
+      options = elements.shift()
+
+    if(options.pathAlias){
+      _path += `${options.pathAlias} = `
+    }
+
+    if(options.shortestPath)
+      _path += `shortestPath(`
+
+    _path += elements.map((element, index) => {
+      return isEven(index) ? this._formatCypherNode(element) : this._formatCypherRel(element)
+    }).join('')
+
+    if(options.shortestPath)
+      _path += `)`
+
+    return _path
 	}
 
 	_getValidNodeAlias(candidateAlias){
