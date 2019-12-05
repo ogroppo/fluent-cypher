@@ -45,7 +45,7 @@ const CypherQuery = require('fluent-cypher');
 //or
 import CypherQuery from 'fluent-cypher'
 
-var query = new CypherQuery();
+var query = new CypherQuery(config);
 
 //let's start building our query!
 ```
@@ -64,7 +64,7 @@ var query = new CypherQuery();
 
 ## <a name="building"></a> Building the query
 
-#### <a name="create"></a> create(...patterns)
+### <a name="create"></a> create(pattern[, pattern])
 
 Accepts pattern as string
 
@@ -116,27 +116,33 @@ query.merge("(node)", "()->[rel:`type`]->()") // MERGE (node), ()->[rel:`type`]-
 query.delete({alias: 'friend'}) // DELETE (friend)
 ~~~
 
-#### <a name="return"></a> return([aliases])
+### <a name="return"></a> .return(returnItem[, returnItem])
+
+returnItem as string
 
 ~~~js
 
-query.return() // RETURN *
+query.return('*') // RETURN *
 query.return('node') // RETURN node
 query.return('node.prop') // RETURN node.prop
 ~~~
 
-### <a name="where"></a> where
+returnItem as object
+
+~~~js
+query.return({alias: 'node', prop: 'p', as: 'that'}) // RETURN node.p as that
+~~~
+
+### <a name="where"></a> .where(whereItem[, whereItem])
 
 ~~~js
 
 query.where({
-	propName: `(?i).*${query._escapeStringRegexp("{}+&?!")}.*`,
-	otherPropName: "(?g).*doesNotNeedToBeEscaped.*",
+	fullName: {'=~': `(?i).*tom.*`}
 })
-
 ~~~
 
-### <a name="debug"></a> debug
+## <a name="debug"></a> .debug()
 
 As `query.queryString` is a parametrised string you may want to print a string that you can copy and paste in the browser console.
 
@@ -149,3 +155,11 @@ query
 	.debug()    // => MATCH (node) MATCH ()-[rel]->()
 
 ~~~
+
+## <a name="test"></a> Test
+
+Tests are written in ava, run the following command
+
+```
+npm t
+```

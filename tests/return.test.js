@@ -13,6 +13,6 @@ test('#return strings', t => {
 
 test('#return objects', t => {
 	var query = new CypherQuery;
-	query.return({alias: 'node', as: 'criminal'}, {alias: 'blatch'}, 'kling');
-	t.is(query.queryString, 'RETURN node as criminal, blatch, kling ');
+	query.return({alias: 'node', prop: 'z', as: 'criminal'}, {alias: 'blatch'}, 'kling');
+	t.is(query.queryString, 'RETURN node.z as criminal, blatch, kling ');
 });
