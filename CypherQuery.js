@@ -7,13 +7,9 @@ const {
   isDate,
   isName,
   isNotName,
-  isNotString,
   isNotVariableName,
-  isNotObject,
   isNotURL,
   isNotPositive,
-  isNotUndefined,
-  isNotEmptyObject
 } = require('isnot')
 
 const relMetaFields = require('./constants/relMetaFields')
@@ -174,6 +170,7 @@ module.exports = class CypherQuery {
       if(isObject(item))
         return list.push(this._formatCypherPropItem(item, ' AND '))
       if(isArray(item)){
+        //does not support lowercase!!!
         if(item.some(subItem => booleanOPerators.includes(subItem))){
           let subList = []
           item.forEach(subItem => {
@@ -230,27 +227,27 @@ module.exports = class CypherQuery {
   }
 
   _formatParamsMap(metaFields, element){
-    const paramsMap = this._getParamMap(metaFields, element)
+    let propsArray = []
+    for(let key in element){
+      if(metaFields.includes(key))
+        continue
 
-    let propsString = ''
-
-    if(Object.keys(paramsMap).length){
-      propsString = '{'
-      let propsArray = []
-      for(let propKey in paramsMap){
-        let propString = ''
-        if(propKey.startsWith('_')){
-          propString += `${propKey.slice(1)}:${paramsMap[propKey]}`
-        }else{
-          propString += `${propKey}:{${paramsMap[propKey]}}`
-        }
-        propsArray.push(propString)
+      let val = element[key]
+      let valString = ''
+      if(isObject(val)){ //the value is a variable {alias: 'varName'}
+        throw new Error("provided an object param " + JSON.stringify(val))
+      }else if(isString(val) && val.startsWith('$')){
+        valString = val.slice(1)
+      }else{
+        valString = `{${this._getParamKey(key, val)}}`
       }
-      propsString += propsArray.join(', ')
-      propsString += '}'
+      propsArray.push(`${key}:${valString}`)
     }
 
-    return propsString
+    if(propsArray.length)
+      return `{${propsArray.join(',')}}`
+
+    return ''
   }
 
   _formatCreatedAt(elements){
@@ -294,31 +291,33 @@ module.exports = class CypherQuery {
 
       let comparisonOperator
       let val = item[key]
+      // refactor type mess below!!!
       if(isObject(val)){ //item => {alias: 'node', key: {'<': 2} <= val}
         let operand = Object.keys(val)[0]
         if(predicateFunctions.includes(operand)){
           propString = `${operand}(${propString})`
         }else{
           comparisonOperator = operand
-          const subValue = val[operand] //{alias: 'node', key: {'<': {alias: 'node3'} <= subVal} }
-          if(isObject(subValue)){
-            if(!subValue.alias)
-              throw new Error(`missing alias`)
-            
-            variableName = subValue.alias
+          const operandValue = val[operand] //{alias: 'node', key: {'<': '$node3'} <= operandValue} }
+          if(isString(operandValue) && operandValue.startsWith('$')){
+            propString += ` ${comparisonOperator} ${operandValue.slice(1)}`
           }else{
-            val = val[operand]
+            propString += ` ${comparisonOperator} {${this._getParamKey(key, val[operand])}}`
           }
         }
-      }else{
-        if(isString(val) && (val.toLowerCase() === 'is null' || val.toLowerCase() === 'is not null'))
-          propString += ` ${val}`
-        else
-          comparisonOperator = '='
       }
 
-      if(comparisonOperator)
-        propString += ` ${comparisonOperator} ${variableName ? variableName : `{${this._getParamKey(key, val)}}`}`
+      if(isString(val)){
+        //{alias: 'node', key: '$node3'} <= val
+        if(val.toLowerCase() === 'is null' || val.toLowerCase() === 'is not null')
+          propString += ` ${val}`
+        else{
+          if(val.startsWith('$'))
+            propString += ` = ${val.slice(1)}`
+          else
+            propString += ` = ${this._getParamKey(key, val)}`
+        }
+      }
 
       list.push(propString);
     }
@@ -408,24 +407,6 @@ module.exports = class CypherQuery {
     let paramKey = propKey + Object.keys(this.queryParams).length
     this.queryParams[paramKey] = isDate(propVal) ? propVal.toISOString() : propVal
     return paramKey
-  }
-
-  _getParamMap(metaFields, element){
-    let paramMap = {}
-    for(let key in element){
-      if(metaFields.includes(key))
-        continue
-
-      let val = element[key]
-      if(isObject(val)){ //the value is a variable {alias: 'varName'}
-        if(!val.alias)
-          throw new Error("_getParamMap: provided an object param without alias")
-        paramMap[key] = val.alias //add it as alias
-      }else{
-        paramMap[key] = this._getParamKey(key, val)
-      }
-    }
-    return paramMap
   }
 
 	create(...patterns){
