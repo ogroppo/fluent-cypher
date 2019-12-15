@@ -3,7 +3,7 @@ import CypherQuery from '../index';
 
 test('detachDelete wrong args', t => {
 	t.throws(()=> new CypherQuery().detachDelete())
-	t.throws(()=> new CypherQuery().detachDelete({alias: 'rel'}))
+	t.throws(()=> new CypherQuery().detachDelete({$: 'rel'}))
 	t.throws(()=> new CypherQuery().detachDelete([]))
 });
 

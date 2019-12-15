@@ -1,5 +1,4 @@
 const relMetaFields = [
-	'alias',
 	'type',
 	'depth',
 	'maxDepth',

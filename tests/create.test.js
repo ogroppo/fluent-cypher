@@ -12,7 +12,7 @@ test('create string', t => {
 
 test('create node', t => {
 	var query = new CypherQuery().create({name: 'zio', date: new Date('2011')});
-	t.is(query.queryString, 'CREATE ({name:{name0}, date:{date1}}) ');
+	t.is(query.queryString, 'CREATE ({name:{name0},date:{date1}}) ');
 	t.deepEqual(query.queryParams, {name0: 'zio', date1: new Date('2011').toISOString()});
 });
 

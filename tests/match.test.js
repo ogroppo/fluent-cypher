@@ -14,8 +14,8 @@ test('match with strings', t => {
 
 test('match with objects', t => {
   t.is(new CypherQuery().match({}).queryString, 'MATCH () ')
-  t.is(new CypherQuery().match({alias: 'm'}).queryString, 'MATCH (m) ')
-  t.is(new CypherQuery().match({alias: 'm'}, {label: 'Score'}).queryString, 'MATCH (m), (:`Score`) ')
+  t.is(new CypherQuery().match({$: 'm'}).queryString, 'MATCH (m) ')
+  t.is(new CypherQuery().match({$: 'm'}, {label: 'Score'}).queryString, 'MATCH (m), (:`Score`) ')
 });
 
 test('match with arrays', t => {

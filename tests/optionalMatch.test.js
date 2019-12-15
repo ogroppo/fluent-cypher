@@ -14,12 +14,12 @@ test('optionalMatch string', t => {
 
 test('optionalMatch object', t => {
 	var query = new CypherQuery;
-	query.optionalMatch({alias: 'ciao'});
+	query.optionalMatch({$: 'ciao'});
 	t.is(query.queryString, 'OPTIONAL MATCH (ciao) ');
 });
 
 test('optionalMatch object', t => {
 	var query = new CypherQuery;
-	query.optionalMatch([{alias: 'ciao'}], [{}]);
+	query.optionalMatch([{$: 'ciao'}], [{}]);
 	t.is(query.queryString, 'OPTIONAL MATCH (ciao), () ');
 });

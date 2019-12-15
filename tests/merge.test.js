@@ -14,10 +14,10 @@ test('MERGE objects', t => {
 	t.is(new CypherQuery().merge({zio: 'billy'}).queryString, 'MERGE ({zio:{zio0}}) ')
 	t.is(new CypherQuery().merge({zio: 'billy'}, {labels: ['Stone', 'frik']}).queryString,
   'MERGE ({zio:{zio0}}), (:`Stone`:`frik`) ')
-  t.is(new CypherQuery().merge({zio: 'billy', alias: 'me'}).queryString,
+  t.is(new CypherQuery().merge({zio: 'billy', $: 'me'}).queryString,
   'MERGE (me{zio:{zio0}}) ')
 
-  t.throws(() => new CypherQuery().merge({alias: 'me space'}))
+  t.throws(() => new CypherQuery().merge({$: 'me space'}))
 
   t.deepEqual(
     new CypherQuery({defaultNodeProps: {zio: 'ken', ladder: 22}}).merge({zio: 'billy'}).queryParams,

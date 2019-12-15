@@ -13,6 +13,6 @@ test('#returnDistinct strings', t => {
 
 test('#returnDistinct objects', t => {
 	var query = new CypherQuery;
-	query.returnDistinct({alias: 'node', as: 'criminal'}, {alias: 'blatch'}, 'kling');
-	t.is(query.queryString, 'RETURN DISTINCT node as criminal, blatch, kling ');
+	query.returnDistinct({$: 'node', as: 'criminal'}, {$: 'blatch'}, 'kling');
+	t.is(query.queryString, 'RETURN DISTINCT node AS criminal, blatch, kling ');
 });

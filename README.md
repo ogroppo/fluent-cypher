@@ -2,7 +2,7 @@
 
 This library allows you to build any cypher query you like and get the query string and all the parameters as an object.
 
-If you want to be able to connect to your Neo4j instance have a look at [fluent-neo4j](https://github.com/ogroppo/fluent-neo4j)
+If you want to be able to connect to your Neo4j instance have a look at [fluent-neo4j](https://github.com/ogroppo/fluent-neo4j) or you can use this package with your own driver/connector
 
 ### What is Cypher
 
@@ -35,7 +35,7 @@ Following the official documentation it is better to avoid literals so everythin
   * [union()](#union)
   * [unionAll()](#unionAll)
   * [loadCsv()](#loadCsv)
-* [Debug](#debug)
+* [Debug](#log)
 * [Tests](#tests)
 
 ## <a name="usage"></a> Usage
@@ -45,18 +45,22 @@ const CypherQuery = require('fluent-cypher');
 //or
 import CypherQuery from 'fluent-cypher'
 
-var query = new CypherQuery(config);
+var query = new CypherQuery();
 
-//let's start building our query!
+query.match({$: 'node'})
+.where({$: 'node', value: {'<=': 25}})
+.return({$: 'node', as: 'myValue')
+.log()
+
 ```
 
 #### <a name="constructor"></a> constuctor([config])
 
 | Option        | Type           | Description
 | ------------- |:-------------:| :-----|
-| `onCreateSetTimestamp` | `Boolean` | timestamps will be added for you like `alias.createdAt = timestamp()`|
-| `onUpdateSetTimestamp` | `Boolean` | timestamps will be added for you like `alias.updatedAt = timestamp()`|
-| `userId`      | `String`      |  Property will be set like `alias.createdBy = {userId}` and `alias.updatedBy = {userId}`
+| `onCreateSetTimestamp` | `Boolean` | timestamps will be added for you like `node.createdAt = timestamp()`|
+| `onUpdateSetTimestamp` | `Boolean` | timestamps will be added for you like `node.updatedAt = timestamp()`|
+| `userId`      | `String`      |  Property will be set like `node.createdBy = {userId}` and `node.updatedBy = {userId}`
 | `defaultNodeProps`      | `Object`      | default props for every node
 | `forcetNodeProps`       | `Object`      | force props for every node
 | `defaultRelProps`      | `Object`      | default props for every relationship
@@ -76,21 +80,21 @@ query.create("(node)", "()->[rel]->()") // 'CREATE (node), ()->[rel]->()'
 
 ~~~
 
-As Object for node
-
+Objects for nodes
 ~~~js
 
-query.create({alias: 'node'}) // 'CREATE (node)'
+query.create({$: 'node1', prop: false}, {$: 'node2', val: 12}) 
+// 'CREATE (node1{prop: false}), (node2{val: 12})'
+
 ~~~
 
-As Array for paths
-
+Arrays for paths
 ~~~js
 
-query.create([{alias: 'parent'}, {type: 'has'}, {alias: 'child'}]) // 'CREATE (parent)-[:has]->(child)'
+query.create([{$: 'parent'}, {type: 'has'}, {$: 'child'}]) // 'CREATE (parent)-[:has]->(child)'
 ~~~
 
-#### <a name="match"></a> match(...patterns)
+#### <a name="match"></a> match(pattern[, pattern])
 
 ~~~js
 
@@ -100,7 +104,7 @@ query.match("(node)", "()->[rel]->()") // MATCH (node), ()->[rel]->()
 
 ~~~
 
-#### <a name="merge"></a> merge(...patterns)
+#### <a name="merge"></a> merge(pattern[, pattern])
 
 ~~~js
 
@@ -109,11 +113,14 @@ query.merge("(node)") // MERGE (node)
 query.merge("(node)", "()->[rel:`type`]->()") // MERGE (node), ()->[rel:`type`]->()
 
 ~~~
-#### <a name="delete"></a> delete(aliases)
+
+#### <a name="delete"></a> delete(deleteItem[, deleteItem])
 
 ~~~js
 
-query.delete({alias: 'friend'}) // DELETE (friend)
+query.delete('friends') // DELETE friends
+query.delete({$: 'friend'}) // DELETE friend
+
 ~~~
 
 ### <a name="return"></a> .return(returnItem[, returnItem])
@@ -130,7 +137,7 @@ query.return('node.prop') // RETURN node.prop
 returnItem as object
 
 ~~~js
-query.return({alias: 'node', prop: 'p', as: 'that'}) // RETURN node.p as that
+query.return({$: 'node', prop: 'p', as: 'that'}) // RETURN node.p as that
 ~~~
 
 ### <a name="where"></a> .where(whereItem[, whereItem])
@@ -142,17 +149,17 @@ query.where({
 })
 ~~~
 
-## <a name="debug"></a> .debug()
+## <a name="log"></a> .log()
 
 As `query.queryString` is a parametrised string you may want to print a string that you can copy and paste in the browser console.
 
 ~~~js
 
 query
-	.match()
-	.debug()     // => MATCH (node)
-	.match()
-	.debug()    // => MATCH (node) MATCH ()-[rel]->()
+	.match('(node)')
+	.log()     // => MATCH (node)
+	.match('()-[rel]->()')
+	.log()    // => MATCH (node) MATCH ()-[rel]->()
 
 ~~~
 

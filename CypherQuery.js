@@ -23,15 +23,18 @@ module.exports = class CypherQuery {
 		this.queryParams = {}
 
     this.config = {}
+    this.variableSymbol = '$' //make configurable
+    this.relMetaFields = [this.variableSymbol].concat(relMetaFields)
+    this.nodeMetaFields = [this.variableSymbol].concat(nodeMetaFields)
     this.config.onCreateSetTimestamp = config.onCreateSetTimestamp || false
     this.config.onUpdateSetTimestamp = config.onUpdateSetTimestamp || false
     this.config.defaultNodeProps = config.defaultNodeProps || {}
     this.config.forceNodeProps = config.forceNodeProps || {}
     this.config.defaultRelProps = config.defaultRelProps || {}
     this.config.forceRelProps = config.forceRelProps || {}
-    this.config.userId = config.userId || false
-		if(this.config.userId){
-			this.queryParams.userId = this.config.userId
+    this.userId = config.userId || false
+		if(this.userId){
+			this.queryParams.userId = this.userId
 		}
 	}
 
@@ -39,7 +42,47 @@ module.exports = class CypherQuery {
     return string.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&")
   }
 
-  _formatCypherOrderBy(props){
+  //{$: 'node', as: 'that'} or {$: 'rel.prop', as: 'relProp'} or {$: 'that', prop: 'lol', as: 'this'}
+  _formatAs(items){
+    var itemList = [];
+
+    items.forEach(item => {
+      if(isName(item))
+        return itemList.push(item)
+
+      if(isObject(item)){
+        if(!item[this.variableSymbol])
+          throw new Error(this.variableSymbol + " is required for here")
+
+        let string = item[this.variableSymbol]
+        if(item.prop)
+          string += "."+item.prop;
+        if(item.as)
+          string += ` AS ${item.as}`
+
+        return itemList.push(string);
+      }
+
+      throw new TypeError("Invalid item => " + JSON.stringify(item))
+    });
+
+    return itemList.join(', ');
+  }
+
+  _formatLabels(labels = []){
+    var cypherLabelString = ''
+
+    labels.forEach(label => {
+      if(isNotName(label))
+        throw new Error("label must be a  string => " + JSON.stringify(label))
+
+      cypherLabelString += ":`"+label+"`"
+    })
+
+    return cypherLabelString
+  }
+
+  _formatOrderBy(props){
     var propsList = [];
 
     props.forEach(prop => {
@@ -48,10 +91,10 @@ module.exports = class CypherQuery {
       if(isObject(prop)){
         var proplist = []
         for (var key in prop) {
-          if(key === 'alias')
+          if(key === this.variableSymbol)
           continue
 
-          let propString = `${prop.alias}.${key} `
+          let propString = `${prop[this.variableSymbol]}.${key} `
           propString += prop[key] //sort order
 
           proplist.push(propString);
@@ -59,21 +102,21 @@ module.exports = class CypherQuery {
         return propsList.push(proplist.join(', '));
       }
 
-      throw new Error("_formatCypherOrderBy: invalid prop type")
+      throw new TypeError(JSON.stringify(prop))
     });
 
     return propsList.join(', ');
   }
 
-  _formatCypherRemove(removeItems){
+  _formatRemove(removeItems){
     var itemList = [];
 
     removeItems.forEach(removeItem => {
       if(isName(removeItem))
         return itemList.push(removeItem)
       if(isObject(removeItem)){
-        if(!removeItem.alias)
-          throw new Error("_formatCypherRemove: alias is required here")
+        if(!removeItem[this.variableSymbol])
+          throw new Error(this.variableSymbol + " is required here")
         let removeItemList = []
         var labels = removeItem.labels || []
         var props = removeItem.props || []
@@ -83,68 +126,25 @@ module.exports = class CypherQuery {
           props.push(removeItem.prop)
 
         if(labels.length){
-          removeItemList.push(this._formatCypherAliasLabels(removeItem.alias, labels))
+          removeItemList.push(this._formatVariableAndLabels(removeItem[this.variableSymbol], labels))
         }
 
-        props.forEach(prop => removeItemList.push(`${removeItem.alias}.${prop}`))
+        props.forEach(prop => removeItemList.push(`${removeItem[this.variableSymbol]}.${prop}`))
 
         return itemList.push(removeItemList.join(', '));
       }
 
-      throw new Error("_formatCypherRemove: invalid prop type")
+      throw new Error("_formatRemove: invalid prop type")
     });
 
     return itemList.join(', ');
   }
 
-  _formatCypherAliasAsItems(items){
-    var itemList = [];
+  _formatVariableAndLabels(variable, labels){
+    if(isNotName(variable))
+      throw new Error("variable required")
 
-    items.forEach(item => {
-      if(isName(item))
-        return itemList.push(item)
-
-      if(isObject(item)){
-        if(!item.alias)
-          throw new Error("_formatCypherAliasAsItems: alias is required for object item")
-
-        let string = item.alias
-        if(item.prop)
-          string += "."+item.prop;
-        if(item.as)
-          string += ` as ${item.as}`
-
-        return itemList.push(string);
-      }
-
-      throw new Error("_formatCypherAliasAsItems: invalid prop type => " + JSON.stringify(item))
-    });
-
-    return itemList.join(', ');
-  }
-
-  _formatCypherLabels(labels = []){
-    var cypherLabelString = ''
-
-    labels.forEach(label => {
-      cypherLabelString += this._formatCypherLabel(label)
-    })
-
-    return cypherLabelString
-  }
-
-  _formatCypherAliasLabels(alias, labels){
-    if(isNotName(alias))
-      throw new Error("_formatCypherAliasLabels: alias required")
-
-    return `${alias}${this._formatCypherLabels(labels)}`
-  }
-
-  _formatCypherLabel(label){
-    if(isNotName(label))
-      throw new Error("_formatCypherLabel: label must be a valid string")
-
-    return ":`"+label+"`"
+    return `${variable}${this._formatLabels(labels)}`
   }
 
   _formatCypherPatterns(patterns){
@@ -199,8 +199,8 @@ module.exports = class CypherQuery {
       return `(${node})`
     }
 
-    if(isName(node.alias) && isNotVariableName(node.alias)){
-      throw new Error(`_formatCypherNode: invalid alias => ${node.alias}`)
+    if(isName(node[this.variableSymbol]) && isNotVariableName(node[this.variableSymbol])){
+      throw new Error(`invalid variable => ${node[this.variableSymbol]}`)
     }
 
     let _node = {
@@ -217,10 +217,10 @@ module.exports = class CypherQuery {
     let string = ''
 
     string += `(`
-    if(_node.alias)
-      string += _node.alias
-    string += this._formatCypherLabels(_node.labels)
-    string += this._formatParamsMap(nodeMetaFields, _node)
+    if(_node[this.variableSymbol])
+      string += _node[this.variableSymbol]
+    string += this._formatLabels(_node.labels)
+    string += this._formatParamsMap(this.nodeMetaFields, _node)
     string += `)`
 
     return string
@@ -234,7 +234,7 @@ module.exports = class CypherQuery {
 
       let val = element[key]
       let valString = ''
-      if(isObject(val)){ //the value is a variable {alias: 'varName'}
+      if(isObject(val)){ //the value is a variable {$: 'varName'}
         throw new Error("provided an object param " + JSON.stringify(val))
       }else if(isString(val) && val.startsWith('$')){
         valString = val.slice(1)
@@ -252,7 +252,7 @@ module.exports = class CypherQuery {
 
   _formatCreatedAt(elements){
     return elements.filter(element => isObject(element)).map(element => {
-      return `${element.alias}.createdAt = timestamp()`
+      return `${element[this.variableSymbol]}.createdAt = timestamp()`
     }).join(', ')
   }
 
@@ -273,52 +273,63 @@ module.exports = class CypherQuery {
   _formatCypherPropItem(item, joint = ', ') {
     var list = []
 
-    //item => {alias: 'node', labels: ['one']}
+    //item => {$: 'node', labels: ['one']}
     let labels = item.labels || []
     if(item.label) 
       labels.push(item.label)
 
     if(labels.length)
-      list.push(this._formatCypherAliasLabels(item.alias, labels))
+      list.push(this._formatVariableAndLabels(item[this.variableSymbol], labels))
 
     for (var key in item) {
-      if(nodeMetaFields.includes(key))
+      if(this.variableSymbol === key || nodeMetaFields.includes(key))
         continue
 
-      let variableName
-      //item => {alias: 'node', key: 'string'}
-      let propString = `${item.alias}.${key}`
+      //item => {$: 'node', key: 'string'}
+      let propString = `${item[this.variableSymbol]}.${key}`
 
       let comparisonOperator
       let val = item[key]
-      // refactor type mess below!!!
-      if(isObject(val)){ //item => {alias: 'node', key: {'<': 2} <= val}
+      
+      //item => {$: 'node', key: {'<': 2} <= val}
+      if(isObject(val)){ 
         let operand = Object.keys(val)[0]
         if(predicateFunctions.includes(operand)){
           propString = `${operand}(${propString})`
         }else{
           comparisonOperator = operand
-          const operandValue = val[operand] //{alias: 'node', key: {'<': '$node3'} <= operandValue} }
-          if(isString(operandValue) && operandValue.startsWith('$')){
-            propString += ` ${comparisonOperator} ${operandValue.slice(1)}`
+          const operandValue = val[operand] 
+          //{$: 'node', key: {'<': '$node3'} <= operandValue} }
+          if(isString(operandValue) && operandValue.startsWith(this.variableSymbol)){
+            propString += ` ${comparisonOperator} ${operandValue.slice(this.variableSymbol.length)}`
           }else{
             propString += ` ${comparisonOperator} {${this._getParamKey(key, val[operand])}}`
           }
         }
+
+        list.push(propString)
+        continue
+      }
+      
+      //{$: 'node', key: 'is null'} <= val
+      if(isString(val) 
+        && (val.toLowerCase() === 'is null' || val.toLowerCase() === 'is not null')
+      ){
+        propString += ` ${val}`
+        list.push(propString)
+        continue
       }
 
-      if(isString(val)){
-        //{alias: 'node', key: '$node3'} <= val
-        if(val.toLowerCase() === 'is null' || val.toLowerCase() === 'is not null')
-          propString += ` ${val}`
-        else{
-          if(val.startsWith('$'))
-            propString += ` = ${val.slice(1)}`
-          else
-            propString += ` = ${this._getParamKey(key, val)}`
-        }
+      //{$: 'node', key: '$node3'} <= val
+      if(isString(val) 
+        && val.startsWith(this.variableSymbol)
+      ){
+        propString += ` = ${val.slice(this.variableSymbol.length)}`
+        list.push(propString)
+        continue
       }
 
+      propString += ` = {${this._getParamKey(key, val)}}`
       list.push(propString);
     }
 
@@ -346,8 +357,8 @@ module.exports = class CypherQuery {
 
     relString += '-['
 
-    if(_rel.alias)
-      relString += _rel.alias
+    if(_rel[this.variableSymbol])
+      relString += _rel[this.variableSymbol]
 
     if(_rel.type)
       relString += ":`"+_rel.type+"`"
@@ -365,7 +376,7 @@ module.exports = class CypherQuery {
         relString += rel.maxDepth
     }
 
-    relString += this._formatParamsMap(relMetaFields, _rel)
+    relString += this._formatParamsMap(this.relMetaFields, _rel)
 
     relString += "]-"
 
@@ -376,23 +387,23 @@ module.exports = class CypherQuery {
   }
 
   _formatCypherPath(...elements){
-    let options = {}
+    let pathElement = {}
     let _path = ''
     if(isEven(elements.length))
-      options = elements.shift()
+      pathElement = elements.shift()
 
-    if(options.pathAlias){
-      _path += `${options.pathAlias} = `
+    if(pathElement[this.variableSymbol]){
+      _path += `${pathElement[this.variableSymbol]} = `
     }
 
-    if(options.shortestPath)
+    if(pathElement.shortestPath)
       _path += `shortestPath(`
 
     _path += elements.map((element, index) => {
       return isEven(index) ? this._formatCypherNode(element) : this._formatCypherRel(element)
     }).join('')
 
-    if(options.shortestPath)
+    if(pathElement.shortestPath)
       _path += `)`
 
     return _path
@@ -418,7 +429,7 @@ module.exports = class CypherQuery {
 		return this
 	}
 
-  debug(options = {}){
+  log(queryName){
 		let _queryString = this.queryString
 		let _queryParams = this.queryParams
 
@@ -429,51 +440,54 @@ module.exports = class CypherQuery {
       )
 		}
 
-		if(!options.compact){
-			_queryString = _queryString.replace(new RegExp(' CREATE', 'g'), '\nCREATE')
-      _queryString = _queryString.replace(new RegExp(' OPTIONAL MATCH', 'g'), '\nOPTIONAL MATCH')
-			_queryString = _queryString.replace(new RegExp('(?<!OPTIONAL) MATCH', 'g'), '\nMATCH')
-			_queryString = _queryString.replace(new RegExp(' MERGE', 'g'), ' \nMERGE')
-			_queryString = _queryString.replace(new RegExp(' SET', 'g'), ' \nSET')
-			_queryString = _queryString.replace(new RegExp(' REMOVE', 'g'), ' \nREMOVE')
-			_queryString = _queryString.replace(new RegExp(' DELETE', 'g'), ' \nDELETE')
-			_queryString = _queryString.replace(new RegExp(' DETACH', 'g'), ' \nDETACH')
-			_queryString = _queryString.replace(new RegExp(' WHERE', 'g'), ' \nWHERE')
-			_queryString = _queryString.replace(new RegExp(' WITH', 'g'), ' \nWITH')
-			_queryString = _queryString.replace(new RegExp(' ORDER BY', 'g'), ' \nORDER BY')
-			_queryString = _queryString.replace(' RETURN', ' \nRETURN')
-			console.log()
-		}
+    console.log() //margin top
+    if(isString(queryName))
+      console.log(`//${queryName}`);
+      
+    _queryString = _queryString.replace(new RegExp(' CREATE', 'g'), '\nCREATE')
+    _queryString = _queryString.replace(new RegExp(' OPTIONAL MATCH', 'g'), '\nOPTIONAL MATCH')
+    _queryString = _queryString.replace(new RegExp('(?<!OPTIONAL) MATCH', 'g'), '\nMATCH')
+    _queryString = _queryString.replace(new RegExp(' MERGE', 'g'), ' \nMERGE')
+    _queryString = _queryString.replace(new RegExp(' SET', 'g'), ' \nSET')
+    _queryString = _queryString.replace(new RegExp(' REMOVE', 'g'), ' \nREMOVE')
+    _queryString = _queryString.replace(new RegExp(' DETACH DELETE', 'g'), ' \nDETACH DELETE')
+    _queryString = _queryString.replace(new RegExp('(?<!DETACH) DELETE', 'g'), '\nDELETE')
+    _queryString = _queryString.replace(new RegExp(' DETACH', 'g'), ' \nDETACH')
+    _queryString = _queryString.replace(new RegExp(' WHERE', 'g'), ' \nWHERE')
+    _queryString = _queryString.replace(new RegExp(' WITH', 'g'), ' \nWITH')
+    _queryString = _queryString.replace(new RegExp(' ORDER BY', 'g'), ' \nORDER BY')
+    _queryString = _queryString.replace(new RegExp(' LIMIT', 'g'), ' \nLIMIT')
+    _queryString = _queryString.replace(' RETURN', ' \nRETURN')
 
 		console.log(_queryString)
 
 		return this
 	}
 
-	delete(...aliases){
-		if(!aliases.length)
-			throw new Error("delete: you must provide aliases")
+	delete(...variables){
+		if(!variables.length)
+			throw new Error("delete: you must provide variables")
 
-    aliases.forEach(alias => {
-      if(isNotName(alias))
-        throw new Error("delete: aliases must all be strings")
+    variables.forEach(variable => {
+      if(isNotName(variable))
+        throw new Error("delete: variables must all be strings")
     })
 
-		this.queryString += `DELETE ${this._formatCypherPatterns(aliases)} `
+		this.queryString += `DELETE ${this._formatCypherPatterns(variables)} `
 
 		return this
 	}
 
-	detachDelete(...aliases){
-		if(!aliases.length)
-			throw new Error("detachDelete: you must provide aliases")
+	detachDelete(...variables){
+		if(!variables.length)
+			throw new Error("detachDelete: you must provide variables")
 
-    aliases.forEach(alias => {
-      if(isNotName(alias))
-        throw new Error("delete: aliases must all be strings")
+    variables.forEach(variable => {
+      if(isNotName(variable))
+        throw new Error("delete: variables must all be strings")
     })
 
-		this.queryString += `DETACH DELETE ${this._formatCypherPatterns(aliases)} `
+		this.queryString += `DETACH DELETE ${this._formatCypherPatterns(variables)} `
 
 		return this
 	}
@@ -496,9 +510,7 @@ module.exports = class CypherQuery {
 		if(options.withHeaders)
 			this.queryString += `WITH HEADERS `
 
-		let lineAlias = options.lineAlias || 'line'
-
-		this.queryString += `FROM ${JSON.stringify(url)} AS ${lineAlias} `
+		this.queryString += `FROM ${JSON.stringify(url)} AS ${options.as || 'line'} `
 
 		return this
 	}
@@ -547,11 +559,11 @@ module.exports = class CypherQuery {
 		return this.match(...patterns)
 	}
 
-	orderBy(...props){
-		if(!props.length)
-			throw new Error("orderBy: cannot order without props")
+	orderBy(...items){
+		if(!items.length)
+			throw new Error("Cannot order without items")
 
-		this.queryString += `ORDER BY ${this._formatCypherOrderBy(props)} `
+		this.queryString += `ORDER BY ${this._formatOrderBy(items)} `
 
 		return this
 	}
@@ -560,7 +572,7 @@ module.exports = class CypherQuery {
 		if(!items.length)
       throw new Error("orderBy: cannot order without items")
 
-		this.queryString += `REMOVE ${this._formatCypherRemove(items)} `
+		this.queryString += `REMOVE ${this._formatRemove(items)} `
 
     return this
 	}
@@ -569,7 +581,7 @@ module.exports = class CypherQuery {
     if(!items.length)
       throw new Error("return: items missing")
 
-		this.queryString += `RETURN ${this._formatCypherAliasAsItems(items)} `
+		this.queryString += `RETURN ${this._formatAs(items)} `
 
 		return this
 	}
@@ -578,7 +590,7 @@ module.exports = class CypherQuery {
     if(!items.length)
       throw new Error("returnDistinct: items missing")
 
-		this.queryString += `RETURN DISTINCT ${this._formatCypherAliasAsItems(items)} `
+		this.queryString += `RETURN DISTINCT ${this._formatAs(items)} `
 
 		return this
 	}
@@ -613,14 +625,14 @@ module.exports = class CypherQuery {
 		return this
 	}
 
-  unwind(data, alias = ''){
+  unwind(data, variable = ''){
     if(!data)
       throw new Error("unwind: must have data")
 
     this.queryString += `UNWIND {${this._getParamKey('data', data)}} `
 
-    if(alias)
-      this.queryString += `as ${alias} `
+    if(variable)
+      this.queryString += `AS ${variable} `
 
 		return this
   }
@@ -638,7 +650,7 @@ module.exports = class CypherQuery {
 		if(!items.length)
       throw new Error("with: argument required")
 
-		this.queryString += `WITH ${this._formatCypherAliasAsItems(items)} `
+		this.queryString += `WITH ${this._formatAs(items)} `
 
 		return this
 	}

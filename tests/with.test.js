@@ -12,5 +12,5 @@ test('with strings', t => {
 
 test('with objects', t => {
 	var q = new CypherQuery();
-	t.is(q.with({alias: 'gino', as: 'daCampo'}, {'alias': 'piipo'}).queryString, 'WITH gino as daCampo, piipo ')
+	t.is(q.with({$: 'gino', as: 'daCampo'}, {'$': 'piipo'}).queryString, 'WITH gino AS daCampo, piipo ')
 });

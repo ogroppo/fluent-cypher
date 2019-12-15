@@ -1,5 +1,4 @@
 const nodeMetaFields = [
-	'alias',
 	'label',
 	'labels'
 ]
