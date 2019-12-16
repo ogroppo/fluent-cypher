@@ -1,14 +1,14 @@
 # Fluent Cypher
 
-This library allows you to build any cypher query you like and get the query string and all the parameters as an object.
+This package allows you to build any cypher query you like and get both the query string and the parameters as an object to be used with the official [neo4j driver](https://www.npmjs.com/package/neo4j-driver).
 
-If you want to be able to connect to your Neo4j instance have a look at [fluent-neo4j](https://github.com/ogroppo/fluent-neo4j) or you can use this package with your own driver/connector
+If you want to be able to connect seamlessy to your Neo4j instance have a look at [fluent-neo4j](https://github.com/ogroppo/fluent-neo4j) otherwise you can always use this package with your own driver/connector.
 
-### What is Cypher
+## What is Cypher
 
 [This guide](https://neo4j.com/developer/cypher-query-language/) explains the basic concepts of Cypher, Neo4j’s query language.
 
-Following the official documentation it is better to avoid literals so everything is treated as a parameter.
+Following the official documentation it is always better to avoid literals so everything is treated as a parameter.
 
 ## Table of Contents
 * [Usage](#usage)
@@ -19,9 +19,9 @@ Following the official documentation it is better to avoid literals so everythin
 	* [optionalMatch()](#optionalMatch)
 	* [where()](#where)
 	* [merge()](#merge)
-	* [onCreateSet()](#onCreateSet)
-	* [onMergeSet()](#onMergeSet)
 	* [set()](#set)
+	* [onCreateSet()](#onCreateSet)
+	* [onMatchSet()](#onMatchSet)
 	* [remove()](#remove)
 	* [delete()](#delete)
 	* [detachDelete()](#detachDelete)
@@ -35,6 +35,7 @@ Following the official documentation it is better to avoid literals so everythin
   * [union()](#union)
   * [unionAll()](#unionAll)
   * [loadCsv()](#loadCsv)
+* [Pattern Types](#types)
 * [Debug](#log)
 * [Tests](#tests)
 
@@ -47,11 +48,25 @@ import CypherQuery from 'fluent-cypher'
 
 var query = new CypherQuery();
 
-query.match({$: 'node'})
-.where({$: 'node', value: {'<=': 25}})
+query.match({$: 'node'}, ['code', {type: 'KNOWS', direction: 'left'}, {}])
+.where({$: 'node', value: {'<=': 25}}, 'OR', {$: 'node', value: 28})
 .return({$: 'node', as: 'myValue')
-.log()
+.orderBy('myValue')
+.limit(5)
 
+/*
+query.log() =>
+MATCH (node), (code)<-[]-()
+WHERE node.value <= 25 OR node.value = 28
+RETURN node AS myValue
+ORDER BY myValue
+LIMIT 5
+
+
+query.queryString => "MATCH (node), (code)<-[]-() WHERE node.value <= {value1} OR node.value = {value2} RETURN node AS myValue ORDER BY myValue LIMIT 5"
+
+query.queryParams => {value1: 25, value2: 28}
+*/
 ```
 
 #### <a name="constructor"></a> constuctor([config])
@@ -68,86 +83,226 @@ query.match({$: 'node'})
 
 ## <a name="building"></a> Building the query
 
-### <a name="create"></a> create(pattern[, pattern])
-
-Accepts pattern as string
-
+### <a name="create"></a> .create(Pattern[, Pattern])
+See [Pattern](#pattern) for accepted arguments
 ~~~js
-
-query.create("(node)") // 'CREATE (node)'
-
-query.create("(node)", "()->[rel]->()") // 'CREATE (node), ()->[rel]->()'
-
-~~~
-
-Objects for nodes
-~~~js
-
-query.create({$: 'node1', prop: false}, {$: 'node2', val: 12}) 
-// 'CREATE (node1{prop: false}), (node2{val: 12})'
-
-~~~
-
-Arrays for paths
-~~~js
-
+query.create("(node)", "()->[rel]->()") //CREATE (node), ()->[rel]->()
+query.create({$: 'node1', prop: false}, {$: 'node2', val: 12}) //CREATE (node1{prop: false}), (node2{val: 12})
 query.create([{$: 'parent'}, {type: 'has'}, {$: 'child'}]) // 'CREATE (parent)-[:has]->(child)'
 ~~~
 
-#### <a name="match"></a> match(pattern[, pattern])
-
+### <a name="match"></a> .match(Pattern[, Pattern])
+See [Pattern](#pattern) for accepted arguments
 ~~~js
-
 query.match("(node)") // MATCH (node)
-
 query.match("(node)", "()->[rel]->()") // MATCH (node), ()->[rel]->()
-
+query.match({$: 'node1', prop: false}, {$: 'node2', val: 12}) //MATCH (node1{prop: false}), (node2{val: 12})
+query.match([{$: 'parent'}, {type: 'has'}, {$: 'child'}]) // 'MATCH (parent)-[:has]->(child)'
 ~~~
 
-#### <a name="merge"></a> merge(pattern[, pattern])
-
+### <a name="optionalMatch"></a> .optionalMatch(Pattern[, Pattern])
+See [Pattern](#pattern) for accepted arguments
 ~~~js
+query.optionalMatch("(node:Stuff)") // MATCH OPTIONAL (node:Stuff)
+~~~
 
+### <a name="where"></a> .where(WhereItem[, WhereItem])
+~~~js
+query.where({$: 'user', fullName: {'=~': `(?i).*tom.*`}})
+// WHERE user.fullName =~ (?i).*tom.*
+~~~
+
+### <a name="merge"></a> .merge(Pattern[, Pattern])
+See [Pattern](#pattern) for accepted arguments
+~~~js
 query.merge("(node)") // MERGE (node)
-
 query.merge("(node)", "()->[rel:`type`]->()") // MERGE (node), ()->[rel:`type`]->()
-
 ~~~
 
-#### <a name="delete"></a> delete(deleteItem[, deleteItem])
-
+### <a name="set"></a> .set(PropItem[, PropItem])
 ~~~js
-
-query.delete('friends') // DELETE friends
-query.delete({$: 'friend'}) // DELETE friend
-
+query.set('friend.rating = 5') // SET friend.vote = true
+query.set({
+	$: 'friend', 
+	labels: ['lol', 'lel'], 
+	wow: '$rating'
+}) // SET friend:lol:lel, friend.wow = rating
 ~~~
 
-### <a name="return"></a> .return(returnItem[, returnItem])
-
-returnItem as string
-
+### <a name="onCreateSet"></a> .onCreateSet(PropItem[, PropItem])
 ~~~js
+query.onCreateSet('friend.rating = 5') // ON CREATE SET friend.vote = true
+~~~
 
+### <a name="onMatchSet"></a> .onMatchSet(PropItem[, PropItem])
+~~~js
+query.onCreateSet('friend.rating = 5') // ON MATCH SET friend.vote = true
+~~~
+
+### <a name="remove"></a> .remove(PropItem[, PropItem])
+~~~js
+query.remove({$: 'friend', prop: 'rating'}) // REMOVE friend.vote = true
+~~~
+
+### <a name="delete"></a> .delete(DeleteItem[, DeleteItem])
+~~~js
+query
+	.match({$: 'lonely'})
+	.where('NOT', ['lonely', {type: 'has'}, {label: 'Friend'}])
+	.delete({$: 'lonely'}) 
+/*
+MATCH (lonely)
+WHERE NOT (lonely)-[:has]->(:Friend)
+DELETE friend
+*/
+~~~
+
+### <a name="detachDelete"></a> .detachDelete(DeleteItem[, DeleteItem])
+~~~js
+query
+	.match(['me', ':knows', {$: 'friend'})
+	.detachDelete('friend') 
+/*
+MATCH (me)-[:knows]->(friend)
+DETACH DELETE friend
+*/
+~~~
+
+### <a name="return"></a> .return(ReturnItem[, ReturnItem])
+~~~js
 query.return('*') // RETURN *
 query.return('node') // RETURN node
 query.return('node.prop') // RETURN node.prop
-~~~
-
-returnItem as object
-
-~~~js
 query.return({$: 'node', prop: 'p', as: 'that'}) // RETURN node.p as that
 ~~~
 
-### <a name="where"></a> .where(whereItem[, whereItem])
-
+### <a name="returnDistinct"></a> .returnDistinct(ReturnItem[, ReturnItem])
 ~~~js
-
-query.where({
-	fullName: {'=~': `(?i).*tom.*`}
-})
+query.returnDistinct('*') // RETURN DISTINCT *
 ~~~
+
+### <a name="limit"></a> .limit(Integer)
+~~~js
+query.limit(1) // LIMIT 1
+~~~
+
+### <a name="skip"></a> .skip(Integer)
+~~~js
+query.skip(1) // LIMIT 1
+~~~
+
+### <a name="orderBy"></a> .orderBy(Integer)
+~~~js
+query.orderBy({$: 'node', key: 'ASC'}) // ORDER BY node.key ASC
+~~~
+
+### <a name="unwind"></a> .unwind(data, alias)
+~~~js
+query.unwind([12,13,14], 'myArray')
+//UNWIND [12,13,14] AS myArray
+~~~
+
+### <a name="with"></a> .with(AliasedItem[, AliasedItem])
+~~~js
+query.with({$: 'greg', as: 'bro'})
+//WITH greg AS bro
+~~~
+
+### <a name="union"></a> .union()
+~~~js
+query.union()
+//UNION
+~~~
+
+### <a name="unionAll"></a> .unionAll()
+~~~js
+query.unionAll()
+//UNION ALL
+~~~
+
+### <a name="loadCsv"></a> .loadCsv(url, options)
+~~~js
+q.loadCsv('https://neo4j.com/docs/cypher-refcard/3.2/csv/artists.csv', {as: 'row', withHeaders: false})
+//LOAD CSV FROM "https://neo4j.com/docs/cypher-refcard/3.2/csv/artists.csv" AS row
+~~~
+
+## <a name="types"></a> Element Types
+
+### <a name="string"></a> Cypher String
+#### String
+This is not manipulated at all and gets inserted in the context as is
+```js
+'node' //(node) if in node context
+'rel:type' //...-[rel:type]->... if in rel context
+'CASE WHEN 1=1 THEN this ELSE that END as what' //CASE WHEN 1=1 THEN this ELSE that END as what
+```
+
+### <a name="node"></a> Node
+#### String
+see [`Cypher String`]('#string')
+
+#### Object
+|Key  		 | Required   | Type   | Description   | 
+| --- 		 |:----------:| -------|---------------|
+|`$`  		 | no         | String  | Variable name for node (must be valid variable name) |
+|`label`   | no         | String        | Label for node |
+|`labels`  | no         | Array         | Label for node |
+|`...rest` | no         | String|Arrray | Other properties for the node |
+```js
+{
+	$: 'node', 
+	label: 'Cat', 
+	labels: ['Animal', 'Living'], 
+	this: 'that',
+	something: ['li', 'la']
+} //(node:Cat:Animal:Living)
+```
+
+### <a name="rel"></a> Rel
+#### String
+see [`Cypher String`]('#string')
+
+#### Object
+|Key  		 | Required   | Type   | Description   | 
+| --- 		 |:----------:| -------|---------------|
+|`$`  		 | no         | String  | Variable name for rel (must be valid variable name) |
+|`type`    | yes (in merge) | String        | Type of rel |
+|`depth`   | no         | Integer|String | Eiter `*` or `4` or `1..2` |
+|`direction`| no         | String | Eiter `left` or `right` (default) or `both` |
+|`...rest` | no         | String|Arrray | Other properties for the rel |
+```js
+{
+	$: 'rel', 
+	type: 'Follows', 
+	depth: '..5',
+	direction: 'both',
+	something: ['amigo']
+} //...)-(rel:Follows{something:['amigo']}*..5)-(...
+```
+
+### <a name="path"></a> Path
+#### Object
+|Key  		 | Required   | Type   | Description   | 
+| --- 		 |:----------:| -------|---------------|
+|`$`  		 | no         | String  | Variable name for path (must be valid variable name) |
+|`shotestPath` | no | Bool        | Whether to use the shortestPath or not |
+```js
+{
+	$: 'myPath', 
+	shotestPath: true
+} // myPath = shortestPath(...)
+```
+
+### <a name="pattern"></a> Pattern
+
+#### String
+see [`Cypher String`]('#string')
+
+### Object 
+see [`Node`]('#node')
+
+### Array
+see [`Path`]('#path')
 
 ## <a name="log"></a> .log()
 

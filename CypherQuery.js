@@ -86,13 +86,15 @@ module.exports = class CypherQuery {
     var propsList = [];
 
     props.forEach(prop => {
+      //node.key ASC
       if(isName(prop))
         return propsList.push(prop)
+      //{$: 'node', key: 'ASC'}
       if(isObject(prop)){
         var proplist = []
         for (var key in prop) {
           if(key === this.variableSymbol)
-          continue
+            continue
 
           let propString = `${prop[this.variableSymbol]}.${key} `
           propString += prop[key] //sort order
@@ -162,7 +164,7 @@ module.exports = class CypherQuery {
     return list.join(', ')
   }
 
-  _formatCypherWhereGroups(items){
+  _formatWhereGroups(items){
     let list = []
     items.forEach(item => {
       if(isName(item))
@@ -641,7 +643,7 @@ module.exports = class CypherQuery {
 		if(!items.length)
       throw new Error("where: items missing")
 
-    this.queryString += `WHERE ${this._formatCypherWhereGroups(items)} `
+    this.queryString += `WHERE ${this._formatWhereGroups(items)} `
 
 		return this
 	}

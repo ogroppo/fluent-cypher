@@ -1,6 +1,6 @@
 {
   "name": "fluent-cypher",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Builds parametrized Cypher queries, with a fluent API",
   "main": "index.js",
   "scripts": {
@@ -9,9 +9,12 @@
   "keywords": [
     "neo4j",
     "cypher",
-    "query builder",
-    "graph database",
-    "fluent API"
+    "query",
+    "builder",
+    "graph",
+    "database",
+    "concatenation",
+    "API"
   ],
   "author": "Orlando Groppo <orlando.groppo@gmail.com>",
   "license": "UNLICENCED",
