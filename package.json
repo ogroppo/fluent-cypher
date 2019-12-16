@@ -9,12 +9,13 @@
   "keywords": [
     "neo4j",
     "cypher",
-    "query",
-    "builder",
-    "graph",
-    "database",
+    "nodes",
+    "relationships",
+    "query builder",
+    "graph database",
     "concatenation",
-    "API"
+    "chainable",
+    "fluent API"
   ],
   "author": "Orlando Groppo <orlando.groppo@gmail.com>",
   "license": "UNLICENCED",

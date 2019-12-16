@@ -87,7 +87,7 @@ query.queryParams => {value1: 25, value2: 28}
 See [Pattern](#pattern) for accepted arguments
 ~~~js
 query.create("(node)", "()->[rel]->()") //CREATE (node), ()->[rel]->()
-query.create({$: 'node1', prop: false}, {$: 'node2', val: 12}) //CREATE (node1{prop: false}), (node2{val: 12})
+query.create({$: 'node1', prop: false}, {$: 'node2', val: 12}) //CREATE (node1{prop:false}), (node2{val:12})
 query.create([{$: 'parent'}, {type: 'has'}, {$: 'child'}]) // 'CREATE (parent)-[:has]->(child)'
 ~~~
 
@@ -96,7 +96,7 @@ See [Pattern](#pattern) for accepted arguments
 ~~~js
 query.match("(node)") // MATCH (node)
 query.match("(node)", "()->[rel]->()") // MATCH (node), ()->[rel]->()
-query.match({$: 'node1', prop: false}, {$: 'node2', val: 12}) //MATCH (node1{prop: false}), (node2{val: 12})
+query.match({$: 'node1', prop: false}, {$: 'node2', val: 12}) //MATCH (node1{prop:false}), (node2{val:12})
 query.match([{$: 'parent'}, {type: 'has'}, {$: 'child'}]) // 'MATCH (parent)-[:has]->(child)'
 ~~~
 
@@ -121,27 +121,34 @@ query.merge("(node)", "()->[rel:`type`]->()") // MERGE (node), ()->[rel:`type`]-
 
 ### <a name="set"></a> .set(PropItem[, PropItem])
 ~~~js
-query.set('friend.rating = 5') // SET friend.vote = true
+query.set('friend.rating = 5') // SET friend.rating = 5
 query.set({
 	$: 'friend', 
 	labels: ['lol', 'lel'], 
-	wow: '$rating'
+	wow: '$rating' // <= access the variable with $
 }) // SET friend:lol:lel, friend.wow = rating
 ~~~
 
 ### <a name="onCreateSet"></a> .onCreateSet(PropItem[, PropItem])
 ~~~js
-query.onCreateSet('friend.rating = 5') // ON CREATE SET friend.vote = true
+query.onCreateSet('friend.rating = 5') // ON CREATE SET friend.rating = 5
 ~~~
 
 ### <a name="onMatchSet"></a> .onMatchSet(PropItem[, PropItem])
 ~~~js
-query.onCreateSet('friend.rating = 5') // ON MATCH SET friend.vote = true
+query.onCreateSet('friend.rating = 5') // ON MATCH SET friend.rating = 5
 ~~~
 
 ### <a name="remove"></a> .remove(PropItem[, PropItem])
 ~~~js
-query.remove({$: 'friend', prop: 'rating'}) // REMOVE friend.vote = true
+query.remove({
+	$: 'p', 
+	prop: 't', 
+	props: ['lel', 'lol'],
+	label: 'one',
+	labels: ['may', 'april']
+})
+// REMOVE p:one:may:april, p.t, p.lel, p.lol
 ~~~
 
 ### <a name="delete"></a> .delete(DeleteItem[, DeleteItem])
