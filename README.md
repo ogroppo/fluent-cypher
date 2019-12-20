@@ -203,16 +203,18 @@ query.skip(1) // LIMIT 1
 query.orderBy({$: 'node', key: 'ASC'}) // ORDER BY node.key ASC
 ~~~
 
-### <a name="unwind"></a> .unwind(data, alias)
+### <a name="unwind"></a> .unwind(UnwindItem)
 ~~~js
-query.unwind([12,13,14], 'myArray')
-//UNWIND [12,13,14] AS myArray
+query.unwind(['[1,2,3] as number') //UNWIND [1,2,3] as number
+query.unwind({$: [1,2,3], as: 'number'}) //UNWIND [1,2,3] as number (parameterized)
+query.unwind({$: 'collection', as: 'list'}) //UNWIND collection as list
+query.unwind({$: '$param', as: 'entry'}) //UNWIND $param as entry
 ~~~
 
 ### <a name="with"></a> .with(AliasedItem[, AliasedItem])
 ~~~js
-query.with({$: 'greg', as: 'bro'})
-//WITH greg AS bro
+query.with('this as that', {$: 'node', as: 'something'}) 
+//WITH this as that, node AS something
 ~~~
 
 ### <a name="union"></a> .union()
@@ -233,10 +235,17 @@ q.loadCsv('https://neo4j.com/docs/cypher-refcard/3.2/csv/artists.csv', {as: 'row
 //LOAD CSV FROM "https://neo4j.com/docs/cypher-refcard/3.2/csv/artists.csv" AS row
 ~~~
 
-## <a name="types"></a> Element Types
+## <a name="types"></a> Argument Types
 
-### <a name="string"></a> Cypher String
-#### String
+### <a name="pattern"></a> Pattern
+#### As ***String*** see [`Cypher`](#string)
+
+#### As ***Object*** see [`Node`](#node)
+
+#### As ***Array*** see [`Path`](#path)
+
+### <a name="string"></a> Cypher
+#### ***String*** only
 This is not manipulated at all and gets inserted in the context as is
 ```js
 'node' //(node) if in node context
@@ -245,10 +254,10 @@ This is not manipulated at all and gets inserted in the context as is
 ```
 
 ### <a name="node"></a> Node
-#### String
-see [`Cypher String`]('#string')
+#### As ***String***
+see [`Cypher`](#string)
 
-#### Object
+#### As ***Object***
 |Key  		 | Required   | Type   | Description   | 
 | --- 		 |:----------:| -------|---------------|
 |`$`  		 | no         | String  | Variable name for node (must be valid variable name) |
@@ -266,17 +275,19 @@ see [`Cypher String`]('#string')
 ```
 
 ### <a name="rel"></a> Rel
-#### String
-see [`Cypher String`]('#string')
+#### As ***String***
+Interpreted as [`Cypher`](#string)
 
-#### Object
+#### As ***Object***
+**Props**
 |Key  		 | Required   | Type   | Description   | 
 | --- 		 |:----------:| -------|---------------|
-|`$`  		 | no         | String  | Variable name for rel (must be valid variable name) |
-|`type`    | yes (in merge) | String        | Type of rel |
-|`depth`   | no         | Integer|String | Eiter `*` or `4` or `1..2` |
-|`direction`| no         | String | Eiter `left` or `right` (default) or `both` |
-|`...rest` | no         | String|Arrray | Other properties for the rel |
+|`$`  		 | no         | `String`  | Variable name for rel (must be valid variable name) |
+|`type`    | yes (in merge) | `String`        | Type of rel |
+|`depth`   | no         | `Integer|String` | Eiter `*` or `4` or `1..2` |
+|`direction`| no         | `String` | Eiter `left` or `right` (default) or `both` |
+|`...rest` | no         | `String|Arrray` | Actual properties of the rel |
+**Example**
 ```js
 {
 	$: 'rel', 
@@ -284,32 +295,28 @@ see [`Cypher String`]('#string')
 	depth: '..5',
 	direction: 'both',
 	something: ['amigo']
-} //...)-(rel:Follows{something:['amigo']}*..5)-(...
+} //...)-(rel:Follows*..5{something:['amigo']})-(...
 ```
 
 ### <a name="path"></a> Path
-#### Object
+#### As ***Array***
+If the number of elements is even, the first Object is used for Path options
+
+**Props**
 |Key  		 | Required   | Type   | Description   | 
 | --- 		 |:----------:| -------|---------------|
 |`$`  		 | no         | String  | Variable name for path (must be valid variable name) |
 |`shotestPath` | no | Bool        | Whether to use the shortestPath or not |
+
+**Example**
 ```js
-{
-	$: 'myPath', 
-	shotestPath: true
-} // myPath = shortestPath(...)
+[
+	{ $: 'myPath', shotestPath: true },
+	{ $: 'start' },
+	{},
+	'final'
+] // myPath = shortestPath((start)-[]->(final))
 ```
-
-### <a name="pattern"></a> Pattern
-
-#### String
-see [`Cypher String`]('#string')
-
-### Object 
-see [`Node`]('#node')
-
-### Array
-see [`Path`]('#path')
 
 ## <a name="log"></a> .log()
 

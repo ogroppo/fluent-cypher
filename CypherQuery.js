@@ -627,14 +627,32 @@ module.exports = class CypherQuery {
 		return this
 	}
 
-  unwind(data, variable = ''){
-    if(!data)
-      throw new Error("unwind: must have data")
+  unwind(unwindItem){
+    if(!unwindItem)
+      throw new Error("must have unwindItem")
 
-    this.queryString += `UNWIND {${this._getParamKey('data', data)}} `
+    if(isString(unwindItem))
+      this.queryString += `UNWIND ${unwindItem} `
+    else if(isObject(unwindItem)){
+      const data = unwindItem[this.variableSymbol]
+      if(!data)
+        throw new Error("variable ($) missing")
 
-    if(variable)
-      this.queryString += `AS ${variable} `
+      this.queryString += `UNWIND `
+      if(isArray(data))
+        this.queryString += `{${this._getParamKey('unwind', unwindItem[this.variableSymbol])}} `
+      else if(isString(data))
+        this.queryString += `${unwindItem[this.variableSymbol]} `
+      else
+        throw new TypeError("unwind: bad `data` type")
+      
+      if(!unwindItem.as)
+        throw new Error("invalid unwindItem")
+
+      this.queryString += `AS ${unwindItem.as} `
+    }else{
+      throw new TypeError("unwind: bad `unwindItem` type")
+    }
 
 		return this
   }
