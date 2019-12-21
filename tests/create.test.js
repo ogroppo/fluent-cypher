@@ -19,7 +19,7 @@ test('create node', t => {
 test('create pattern', t => {
 	t.is(new CypherQuery().create([{name: 'zio'}]).queryString, 'CREATE ({name:{name0}}) ');
 	t.is(
-    new CypherQuery().create([{name: 'zio'}, {type: 'cane'}, 'boia']).queryString,
-    'CREATE ({name:{name0}})-[:`cane`]->(boia) '
+    new CypherQuery().create([{name: 'zio'}, {type: 'HAPPY'}, 'boy']).queryString,
+    'CREATE ({name:{name0}})-[:HAPPY]->(boy) '
   );
 });

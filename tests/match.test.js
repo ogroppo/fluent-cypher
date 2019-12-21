@@ -15,12 +15,12 @@ test('match with strings', t => {
 test('match with objects', t => {
   t.is(new CypherQuery().match({}).queryString, 'MATCH () ')
   t.is(new CypherQuery().match({$: 'm'}).queryString, 'MATCH (m) ')
-  t.is(new CypherQuery().match({$: 'm'}, {label: 'Score'}).queryString, 'MATCH (m), (:`Score`) ')
+  t.is(new CypherQuery().match({$: 'm'}, {label: 'Score'}).queryString, 'MATCH (m), (:Score) ')
 });
 
 test('match with arrays', t => {
   t.is(new CypherQuery().match([{},'',{}]).queryString, 'MATCH ()-[]->() ')
-  t.is(new CypherQuery().match(['zio',{type: 'j'},'mega']).queryString, 'MATCH (zio)-[:`j`]->(mega) ')
+  t.is(new CypherQuery().match(['zio',{type: 'j o'},'mega']).queryString, 'MATCH (zio)-[:`j o`]->(mega) ')
   t.is(
     new CypherQuery().match(['zio','rel','mega',{direction: 'left'},'pas']).queryString,
     'MATCH (zio)-[rel]->(mega)<-[]-(pas) '

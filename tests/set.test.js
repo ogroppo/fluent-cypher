@@ -17,7 +17,7 @@ test('#set objects', t => {
   )
   t.is(
     new CypherQuery().set({$: 'node', label: 'zio', labels: ['Po']}).queryString,
-    'SET node:`Po`:`zio` '
+    'SET node:Po:zio '
   )
   t.deepEqual(
     new CypherQuery().set({$: 'node', log: null, d: new Date('2019-12-12')}).queryParams,

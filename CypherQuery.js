@@ -69,14 +69,14 @@ module.exports = class CypherQuery {
     return itemList.join(', ');
   }
 
-  _formatLabels(labels = []){
+  _formatCypherLabels(labels = []){
     var cypherLabelString = ''
 
     labels.forEach(label => {
       if(isNotName(label))
-        throw new Error("label must be a  string => " + JSON.stringify(label))
+        throw new Error("label must be a string => " + JSON.stringify(label))
 
-      cypherLabelString += ":`"+label+"`"
+      cypherLabelString += `:${this._wrapBackticks(label)}`
     })
 
     return cypherLabelString
@@ -146,7 +146,7 @@ module.exports = class CypherQuery {
     if(isNotName(variable))
       throw new Error("variable required")
 
-    return `${variable}${this._formatLabels(labels)}`
+    return `${variable}${this._formatCypherLabels(labels)}`
   }
 
   _formatCypherPatterns(patterns){
@@ -221,7 +221,7 @@ module.exports = class CypherQuery {
     string += `(`
     if(_node[this.variableSymbol])
       string += _node[this.variableSymbol]
-    string += this._formatLabels(_node.labels)
+    string += this._formatCypherLabels(_node.labels)
     string += this._formatParamsMap(this.nodeMetaFields, _node)
     string += `)`
 
@@ -343,10 +343,6 @@ module.exports = class CypherQuery {
       return `-[${rel}]->`
     }
 
-    if(isName(rel.type) && isNotVariableName(rel.type)){
-      throw new Error(`_formatCypherRel: invalid type => ${rel.type}`)
-    }
-
     let _rel = {
       ...this.config.defaultRelProps,
       ...rel,
@@ -354,7 +350,7 @@ module.exports = class CypherQuery {
     }
 
     let relString = ''
-    if(_rel.direction === 'left')
+    if(_rel.direction === 'left' || _rel.direction === -1)
       relString += '<'
 
     relString += '-['
@@ -362,8 +358,9 @@ module.exports = class CypherQuery {
     if(_rel[this.variableSymbol])
       relString += _rel[this.variableSymbol]
 
-    if(_rel.type)
-      relString += ":`"+_rel.type+"`"
+    if(_rel.type){
+      relString += `:${this._wrapBackticks(_rel.type)}`
+    }
 
     if(_rel.depth){ //can be *, *1
       relString += '*'
@@ -422,6 +419,19 @@ module.exports = class CypherQuery {
     return paramKey
   }
 
+  _wrapBackticks(string){
+    return string.indexOf(' ') >= 0 || isNotVariableName(string) ? "`"+string+"`" : string
+  }
+
+  call(arg){
+		if(!arg)
+			throw new Error("arg missing")
+
+    this.queryString += `CALL ${arg} `
+
+		return this
+	}
+
 	create(...patterns){
     if(isEmptyArray(patterns))
 			throw "create: at least a pattern required"
@@ -455,6 +465,7 @@ module.exports = class CypherQuery {
     _queryString = _queryString.replace(new RegExp(' DETACH DELETE', 'g'), ' \nDETACH DELETE')
     _queryString = _queryString.replace(new RegExp('(?<!DETACH) DELETE', 'g'), '\nDELETE')
     _queryString = _queryString.replace(new RegExp(' DETACH', 'g'), ' \nDETACH')
+    _queryString = _queryString.replace(new RegExp(' FOREACH', 'g'), ' \nFOREACH')
     _queryString = _queryString.replace(new RegExp(' WHERE', 'g'), ' \nWHERE')
     _queryString = _queryString.replace(new RegExp(' WITH', 'g'), ' \nWITH')
     _queryString = _queryString.replace(new RegExp(' ORDER BY', 'g'), ' \nORDER BY')
@@ -492,7 +503,16 @@ module.exports = class CypherQuery {
 		this.queryString += `DETACH DELETE ${this._formatCypherPatterns(variables)} `
 
 		return this
-	}
+  }
+  
+  foreach(arg){
+    if(!arg)
+      throw new Error(".foreach(arg): arg missing")
+      
+    this.queryString += `FOREACH ${arg} `
+
+    return this
+  }
 
 	limit(amount){
 		if(isNotPositive(amount))
@@ -671,6 +691,15 @@ module.exports = class CypherQuery {
       throw new Error("with: argument required")
 
 		this.queryString += `WITH ${this._formatAs(items)} `
+
+		return this
+  }
+  
+  yield(arg){
+		if(!arg)
+			throw new Error("arg missing")
+
+    this.queryString += `YIELD ${arg} `
 
 		return this
 	}

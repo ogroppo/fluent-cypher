@@ -35,6 +35,8 @@ Following the official documentation it is always better to avoid literals so ev
   * [union()](#union)
   * [unionAll()](#unionAll)
   * [loadCsv()](#loadCsv)
+  * [call()](#call)
+  * [yield()](#yield)
 * [Pattern Types](#types)
 * [Debug](#log)
 * [Tests](#tests)
@@ -233,6 +235,18 @@ query.unionAll()
 ~~~js
 q.loadCsv('https://neo4j.com/docs/cypher-refcard/3.2/csv/artists.csv', {as: 'row', withHeaders: false})
 //LOAD CSV FROM "https://neo4j.com/docs/cypher-refcard/3.2/csv/artists.csv" AS row
+~~~
+
+### <a name="call"></a> .call(string)
+~~~js
+q.call('dbms.procedures()')
+//CALL dbms.procedures()
+~~~
+
+### <a name="yield"></a> .yield(string)
+~~~js
+q.yield('name, signature')
+//YIELD name, signature
 ~~~
 
 ## <a name="types"></a> Argument Types

@@ -13,7 +13,7 @@ test('MERGE strings', t => {
 test('MERGE objects', t => {
 	t.is(new CypherQuery().merge({zio: 'billy'}).queryString, 'MERGE ({zio:{zio0}}) ')
 	t.is(new CypherQuery().merge({zio: 'billy'}, {labels: ['Stone', 'frik']}).queryString,
-  'MERGE ({zio:{zio0}}), (:`Stone`:`frik`) ')
+  'MERGE ({zio:{zio0}}), (:Stone:frik) ')
   t.is(new CypherQuery().merge({zio: 'billy', $: 'me'}).queryString,
   'MERGE (me{zio:{zio0}}) ')
 
@@ -33,6 +33,6 @@ test('MERGE objects', t => {
 test('MERGE array', t => {
 	t.is(new CypherQuery().merge([{zio: 'billy'}]).queryString, 'MERGE ({zio:{zio0}}) ')
 	t.is(new CypherQuery().merge([{zio: 'billy'}, {type: 'Stone', direction: 'left'}, {mega: 'tera'}]).queryString,
-    'MERGE ({zio:{zio0}})<-[:`Stone`]-({mega:{mega1}}) '
+    'MERGE ({zio:{zio0}})<-[:Stone]-({mega:{mega1}}) '
   )
 });
