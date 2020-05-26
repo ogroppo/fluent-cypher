@@ -14,7 +14,7 @@ const {
 
 const relMetaFields = require('./constants/relMetaFields')
 const nodeMetaFields = require('./constants/nodeMetaFields')
-const booleanOPerators = require('./constants/booleanOPerators')
+const booleanOperators = require('./constants/booleanOperators')
 const predicateFunctions = require('./constants/predicateFunctions')
 
 module.exports = class CypherQuery {
@@ -173,7 +173,7 @@ module.exports = class CypherQuery {
         return list.push(this._formatCypherPropItem(item, ' AND '))
       if(isArray(item)){
         //does not support lowercase!!!
-        if(item.some(subItem => booleanOPerators.includes(subItem))){
+        if(item.some(subItem => booleanOperators.includes(subItem))){
           let subList = []
           item.forEach(subItem => {
             if(isName(subItem))
