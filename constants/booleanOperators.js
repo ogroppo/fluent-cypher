@@ -1,5 +1,5 @@
-const booleanOPerators = [
+const booleanOperators = [
   'OR', 'AND', 'XOR', 'NOT'
 ]
 
-module.exports = booleanOPerators
+module.exports = booleanOperators
