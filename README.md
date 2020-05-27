@@ -79,9 +79,9 @@ query.queryParams => {value1: 25, value2: 28}
 | `onUpdateSetTimestamp` | `Boolean` | timestamps will be added for you like `node.updatedAt = timestamp()`|
 | `userId`      | `String`      |  Property will be set like `node.createdBy = {userId}` and `node.updatedBy = {userId}`
 | `defaultNodeProps`      | `Object`      | default props for every node
-| `forcetNodeProps`       | `Object`      | force props for every node
+| `forceNodeProps`       | `Object`      | force props for every node
 | `defaultRelProps`      | `Object`      | default props for every relationship
-| `forcetRelProps`       | `Object`      | force props for every relationship
+| `forceRelProps`       | `Object`      | force props for every relationship
 
 ## <a name="building"></a> Building the query
 
